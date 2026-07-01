@@ -12,14 +12,21 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { useDownload } from "@/shared/hooks/use-download";
 import type { DownloadOptions } from "@/shared/types/download";
+
+type DictType = "en-zh" | "zh-en";
 
 interface DownloadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   downloadOptions: DownloadOptions | null;
   onSuccess?: () => void;
+  dictType?: DictType;
+  onDictTypeChange?: (dictType: DictType) => void;
+  showDictTypeSelect?: boolean;
 }
 
 function formatBytes(bytes: number): string {
@@ -35,6 +42,9 @@ export function DownloadDialog({
   onOpenChange,
   downloadOptions,
   onSuccess,
+  dictType = "en-zh",
+  onDictTypeChange,
+  showDictTypeSelect = false,
 }: DownloadDialogProps) {
   const { t } = useTranslation();
   const {
@@ -84,7 +94,6 @@ export function DownloadDialog({
   };
 
   const canClose = !isDownloading && !isExtracting;
-  const showProgress = progress && progress.total > 0;
 
   return (
     <Dialog open={open} onOpenChange={canClose ? onOpenChange : undefined}>
@@ -115,6 +124,30 @@ export function DownloadDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {showDictTypeSelect && !isDownloading && !isExtracting && !error && (
+            <div className="space-y-2">
+              <Label>{t("download.dialog.dict_type_label")}</Label>
+              <RadioGroup
+                value={dictType}
+                onValueChange={(val) => onDictTypeChange?.(val as DictType)}
+                className="flex gap-4"
+              >
+                <div className="flex items-center gap-1.5">
+                  <RadioGroupItem value="en-zh" id="dict-en-zh" />
+                  <Label htmlFor="dict-en-zh" className="cursor-pointer font-normal">
+                    {t("download.dialog.dict_type_en_zh")}
+                  </Label>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <RadioGroupItem value="zh-en" id="dict-zh-en" />
+                  <Label htmlFor="dict-zh-en" className="cursor-pointer font-normal">
+                    {t("download.dialog.dict_type_zh_en")}
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+          )}
+
           {error ? (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
@@ -130,7 +163,7 @@ export function DownloadDialog({
                 </div>
               )}
 
-              {isDownloading && showProgress && (
+              {isDownloading && progress && progress.total > 0 && (
                 <div className="space-y-2">
                   <Progress
                     value={Math.min(100, progress.percentage)}
@@ -146,7 +179,7 @@ export function DownloadDialog({
                 </div>
               )}
 
-              {isDownloading && !showProgress && (
+              {isDownloading && (!progress || progress.total === 0) && (
                 <div className="flex justify-center">
                   <Spinner />
                 </div>

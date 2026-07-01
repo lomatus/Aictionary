@@ -1,33 +1,6 @@
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 
-/// Convert "Mod" to platform-specific modifier key and normalize special keys
-fn normalize_shortcut(shortcut: &str) -> String {
-    // First replace "Mod" with platform-specific key
-    #[cfg(target_os = "macos")]
-    let normalized = shortcut.replace("Mod", "Command");
-
-    #[cfg(not(target_os = "macos"))]
-    let normalized = shortcut.replace("Mod", "Control");
-
-    // Handle space key - replace " " at the end or standalone with "Space"
-    // Split by + to handle each part
-    let parts: Vec<&str> = normalized.split('+').collect();
-    let normalized_parts: Vec<String> = parts
-        .iter()
-        .map(|part| {
-            let trimmed = part.trim();
-            if trimmed.is_empty() || trimmed == " " {
-                "Space".to_string()
-            } else {
-                trimmed.to_string()
-            }
-        })
-        .collect();
-
-    normalized_parts.join("+")
-}
-
 /// Best-effort simulation of a copy shortcut (`Cmd+C` / `Ctrl+C`) in the
 /// currently active application so that the user's selection is placed
 /// on the clipboard before we read it.
@@ -82,31 +55,28 @@ pub async fn setup_shortcuts<R: Runtime>(
 
     let shortcuts = app.global_shortcut();
 
-    // Unregister all existing shortcuts first
+    // Unregister all existing shortcuts first to replace bindings
     shortcuts
         .unregister_all()
         .map_err(|e| format!("Failed to unregister shortcuts: {}", e))?;
 
     if !enabled {
-      return Ok(());
+        return Ok(());
     }
 
-    // Normalize shortcuts to replace "Mod" with platform-specific key
-    let quick_query_normalized = normalize_shortcut(&quick_query);
-    let new_query_normalized = normalize_shortcut(&new_query);
-
-    // Parse shortcuts
-    let quick_query_shortcut: Shortcut = quick_query_normalized.parse().map_err(|e| {
+    // Parse shortcuts directly — tauri-plugin-global-shortcut handles
+    // platform-specific normalization internally.
+    let quick_query_shortcut: Shortcut = quick_query.parse().map_err(|e| {
         format!(
             "Failed to parse quick query shortcut '{}': {}",
-            quick_query_normalized, e
+            quick_query, e
         )
     })?;
 
-    let new_query_shortcut: Shortcut = new_query_normalized.parse().map_err(|e| {
+    let new_query_shortcut: Shortcut = new_query.parse().map_err(|e| {
         format!(
             "Failed to parse new query shortcut '{}': {}",
-            new_query_normalized, e
+            new_query, e
         )
     })?;
 
@@ -142,21 +112,25 @@ pub async fn setup_shortcuts<R: Runtime>(
         })
         .map_err(|e| format!("Failed to register quick query shortcut: {}", e))?;
 
-    // Register new query shortcut (show window + focus search box)
+    // Register new query shortcut (show window + focus search box, or hide if visible)
     let app_handle = app.clone();
     shortcuts
         .on_shortcut(new_query_shortcut, move |_app, _shortcut, event| {
             if event.state == ShortcutState::Pressed {
                 let app_handle = app_handle.clone();
                 tauri::async_runtime::spawn(async move {
-                    // Show the main window and focus it
                     if let Some(window) = app_handle.get_webview_window("main") {
-                        let _ = window.show();
-                        let _ = window.set_focus();
-                        let _ = window.unminimize();
-
-                        // Emit event to frontend to focus search box
-                        let _ = app_handle.emit("new-query", ());
+                        // Toggle: if window is visible, hide it; otherwise show + focus
+                        let is_visible = window.is_visible().unwrap_or(false);
+                        if is_visible {
+                            let _ = window.hide();
+                        } else {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                            let _ = window.unminimize();
+                            // Emit event to frontend to focus search box
+                            let _ = app_handle.emit("new-query", ());
+                        }
                     }
                 });
             }

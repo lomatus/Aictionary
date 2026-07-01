@@ -13,8 +13,8 @@ export function KeyboardTab() {
 
   const handleReset = () => {
     updateKeyboard({
-      quickQuery: "Mod+Enter",
-      newQuery: "Mod+Shift+K",
+      quickQuery: "Ctrl+Q",
+      newQuery: "Ctrl+W",
     });
     toast.success(t("settings.keyboard.toast.reset"));
   };
@@ -51,7 +51,7 @@ export function KeyboardTab() {
               id="shortcut-quick"
               value={settings.keyboard.quickQuery}
               onChange={(value) => updateKeyboard({ quickQuery: value })}
-              placeholder="Mod+Enter"
+              placeholder="Ctrl+Q"
             />
           </div>
           <div className="grid gap-2">
@@ -60,7 +60,7 @@ export function KeyboardTab() {
               id="shortcut-new"
               value={settings.keyboard.newQuery}
               onChange={(value) => updateKeyboard({ newQuery: value })}
-              placeholder="Mod+Shift+K"
+              placeholder="Ctrl+W"
             />
           </div>
           <Button variant="outline" onClick={handleReset}>

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
@@ -17,8 +17,22 @@ export function useGlobalShortcuts({
   onQuickQuery,
   onNewQuery,
 }: UseGlobalShortcutsOptions) {
+  // Track whether settings have been loaded from localStorage.
+  // On first render the atom returns the default value before hydration,
+  // so we skip shortcut setup until we see a value that differs from
+  // the hard-coded defaults in defaultSettings — which only happens once
+  // localStorage has been read.
+  const isInitialMount = useRef(true);
+
   useEffect(() => {
-    // Setup shortcuts on mount and when shortcuts change
+    // Skip on the very first render when defaults are still active.
+    // atomWithStorage hydrates asynchronously from localStorage, so the
+    // effect runs twice: first with defaults, then with persisted values.
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
     const setupShortcuts = async () => {
       try {
         await invoke("setup_shortcuts", {
@@ -35,7 +49,6 @@ export function useGlobalShortcuts({
   }, [quickQuery, newQuery, enabled]);
 
   useEffect(() => {
-    // Listen for quick-query event (clipboard text)
     const unlisten = listen<string>("quick-query", (event) => {
       onQuickQuery(event.payload);
     });
@@ -46,7 +59,6 @@ export function useGlobalShortcuts({
   }, [onQuickQuery]);
 
   useEffect(() => {
-    // Listen for new-query event (focus search box)
     const unlisten = listen("new-query", () => {
       onNewQuery();
     });

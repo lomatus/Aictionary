@@ -21,7 +21,20 @@
       "placeholder": "搜索单词…",
       "searching": "搜索中…",
       "button": "搜索",
-      "empty_error": "请输入要查询的单词。"
+      "empty_error": "请输入要查询的单词。",
+      "dict_type": {
+        "auto": "自动",
+        "en_zh": "英汉",
+        "zh_en": "汉英"
+      },
+      "suggestion": {
+        "prefix": "以 \"{{query}}\" 开头的词：",
+        "spellcheck": "您是否要查找：",
+        "lemma": "\"{{query}}\" 的原形是 \"{{lemma}}\"",
+        "view_lemma": "查看 {{lemma}}",
+        "distance_one": "编辑距离 1",
+        "distance": "编辑距离 {{n}}"
+      }
     },
     "history": {
       "title": "最近查询"
@@ -47,12 +60,13 @@
     },
     "llm": {
       "missing_config": "该单词不在本地缓存中，且尚未配置 AI 提供商。",
-      "missing_cache_path": "使用 AI 补齐前请先设置词典缓存路径。",
-      "generating": "正在通过 {{model}} 生成释义…",
-      "generating_status": "正在通过 {{model}} 生成释义…",
-      "success": "已使用 {{model}} 生成释义并写入本地缓存。",
-      "error": "AI 提供商暂时无法生成释义，请稍后重试。",
-      "cache_error": "释义已显示，但写入缓存失败。请检查目录权限。"
+      "missing_cache_path": "使用 AI 翻译前请先设置词典缓存路径。",
+      "not_found_word": "词典中未找到该单词。可尝试输入短语或句子进行 AI 翻译。",
+      "generating": "正在通过 {{model}} 生成翻译…",
+      "generating_status": "正在通过 {{model}} 生成翻译…",
+      "success": "已使用 {{model}} 完成翻译。",
+      "error": "AI 提供商暂时无法生成翻译，请稍后重试。",
+      "cache_error": "翻译已显示，但写入缓存失败。"
     },
     "errors": {
       "dictionary": "无法查询词典，请稍后再试。"
@@ -137,7 +151,9 @@
       "anki": "Anki",
       "dictionary": "词典",
       "keyboard": "键盘",
-      "about": "关于"
+      "about": "关于",
+      "prompts": "提示词",
+      "glossary": "术语表"
     },
     "appearance": {
       "title": "主题",
@@ -317,6 +333,27 @@
         "reset": "键盘快捷键已恢复。"
       }
     },
+    "prompts": {
+      "title": "提示词模板",
+      "description": "自定义用于 LLM 翻译和定义生成的系统提示词。",
+      "translation_label": "翻译提示词",
+      "translation_helper": "使用 {source_text} 表示输入文本，{target_lang} 表示目标语言。",
+      "definition_label": "定义提示词",
+      "definition_helper": "通过 LLM 生成单词定义时使用的系统提示词。",
+      "reset": "重置",
+      "reset_success": "提示词模板已重置。"
+    },
+    "glossary": {
+      "title": "专业术语表",
+      "description": "定义特定领域的术语，确保翻译一致性。",
+      "helper": "在此定义的术语将作为上下文注入 LLM 翻译请求。",
+      "source": "源术语",
+      "target": "目标翻译",
+      "notes": "备注",
+      "notes_placeholder": "例如：医学、法律等",
+      "add": "添加术语",
+      "reset_success": "术语表已重置。"
+    },
     "about": {
       "info": {
         "title": "应用信息",
@@ -348,7 +385,10 @@
       "complete": "下载完成！",
       "error": "下载失败",
       "close": "关闭",
-      "cancel": "取消"
+      "cancel": "取消",
+      "dict_type_label": "词典类型",
+      "dict_type_en_zh": "英汉 (English ↔ Chinese)",
+      "dict_type_zh_en": "汉英 (Chinese → English)"
     }
   }
 }

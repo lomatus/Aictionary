@@ -1,6 +1,7 @@
 pub mod commands;
+mod db;
 mod types;
 mod utils;
 
-// Re-export for Tauri handler (the macro generates __cmd__ prefixed items)
 pub use commands::*;
+pub use db::{LanguagePair, QueryResult, Suggestion, SpellcheckCandidate};

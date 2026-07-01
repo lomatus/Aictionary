@@ -1,8 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
 import { openPath } from "@tauri-apps/plugin-opener";
-import { open } from "@tauri-apps/plugin-dialog";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,11 +15,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useSettings } from "@/features/settings/hooks/use-settings";
 import { formatDistanceToNow } from "date-fns";
-import { FolderOpen } from "lucide-react";
 import { DownloadDialog } from "@/shared/components/download-dialog";
 import { getLatestDictionaryRelease } from "@/shared/services/github-service";
 import type { DownloadOptions } from "@/shared/types/download";
 import { MIN_FULL_DICTIONARY_ENTRIES } from "@/shared/constants/dictionary";
+
+type DictType = "en-zh" | "zh-en";
 
 export function DictionaryTab() {
   const { t } = useTranslation();
@@ -28,25 +28,21 @@ export function DictionaryTab() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
-  const [downloadOptions, setDownloadOptions] =
-    useState<DownloadOptions | null>(null);
+  const [downloadOptions, setDownloadOptions] = useState<DownloadOptions | null>(null);
+  const [downloadDictType, setDownloadDictType] = useState<DictType>("en-zh");
+  const [dbPath, setDbPath] = useState<string>("");
 
-  const handleBrowseFolder = async () => {
-    try {
-      const selected = await open({
-        directory: true,
-        multiple: false,
-        defaultPath: settings.dictionary.cachePath || undefined,
-      });
-      if (selected) {
-        updateDictionary({ cachePath: selected });
-      }
-    } catch (error) {
-      console.warn("Failed to browse folder:", error);
-      toast.error(t("settings.dictionary.toast.browse_error"));
-    }
-  };
+  // Get the actual db path from Tauri backend on mount
+  useEffect(() => {
+    invoke<string>("get_actual_db_path")
+      .then((path) => {
+        setDbPath(path);
+      })
+      .catch(console.error);
+  }, []);
 
+  // Fallback if not loaded yet
+  const displayPath = dbPath || "%LOCALAPPDATA%\\aictionary-re\\dictionary.db";
   const handleCheckCompleteness = async () => {
     const cachePath = settings.dictionary.cachePath.trim();
     if (!cachePath) {
@@ -91,10 +87,10 @@ export function DictionaryTab() {
     setIsRefreshing(true);
     try {
       // Fetch the latest release from GitHub
-      const release = await getLatestDictionaryRelease();
+      const release = await getLatestDictionaryRelease(downloadDictType);
 
       // Prepare download options
-      const zipFileName = "open-english-dictionary.zip";
+      const zipFileName = release.fileName;
       const cachePath = settings.dictionary.cachePath.replace(/[\/\\]+$/, ""); // Remove trailing slashes
 
       // Extract to parent directory since zip contains 'dictionary' folder
@@ -161,27 +157,12 @@ export function DictionaryTab() {
           </CardHeader>
           <CardContent className="grid gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="cache-path">
-                {t("settings.dictionary.cache.label")}
-              </Label>
-              <div className="flex gap-2">
-                <Input
-                  id="cache-path"
-                  placeholder="/path/to/cache"
-                  value={settings.dictionary.cachePath}
-                  onChange={(event) =>
-                    updateDictionary({ cachePath: event.target.value })
-                  }
-                />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleBrowseFolder}
-                  title={t("settings.dictionary.cache.button_browse")}
-                >
-                  <FolderOpen className="h-4 w-4" />
-                </Button>
-              </div>
+              <Label>{t("settings.dictionary.cache.db_label")}</Label>
+              <Input
+                value={displayPath}
+                readOnly
+                className="bg-muted font-mono text-xs"
+              />
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span>{t("settings.dictionary.cache.last_updated")}</span>
@@ -233,6 +214,9 @@ export function DictionaryTab() {
         onOpenChange={setDownloadDialogOpen}
         downloadOptions={downloadOptions}
         onSuccess={handleDownloadSuccess}
+        dictType={downloadDictType}
+        onDictTypeChange={setDownloadDictType}
+        showDictTypeSelect={true}
       />
     </>
   );

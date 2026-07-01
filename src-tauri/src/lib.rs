@@ -78,6 +78,9 @@ pub fn run() {
             dictionary::get_default_dictionary_path,
             dictionary::check_dictionary_cache_exists,
             dictionary::count_dictionary_entries,
+            dictionary::get_language_pairs,
+            dictionary::import_dictionary_from_dir,
+            dictionary::is_sentence,
             // LLM commands
             llm::test_llm_provider,
             // Export commands

@@ -9,8 +9,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -28,7 +29,7 @@ import {
 
 export function LlmProvidersTab() {
   const { t } = useTranslation();
-  const { settings, updateLlm } = useSettings();
+  const { settings, updateLlm, updatePromptTemplates } = useSettings();
   const [isTesting, setIsTesting] = useState(false);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [models, setModels] = useState<LlmModelSummary[]>([]);
@@ -198,6 +199,75 @@ export function LlmProvidersTab() {
           </div>
         </CardContent>
       </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("settings.prompts.title")}</CardTitle>
+          <CardDescription>{t("settings.prompts.description")}</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-6">
+          <div className="grid gap-2">
+            <div className="flex items-center justify-between">
+              <Label>{t("settings.prompts.translation_label")}</Label>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  updatePromptTemplates({
+                    translation: DEFAULT_TRANSLATION_PLACEHOLDER,
+                  });
+                  toast.success(t("settings.prompts.reset_success"));
+                }}
+                className="text-xs"
+              >
+                {t("settings.prompts.reset")}
+              </Button>
+            </div>
+            <p className="text-muted-foreground text-xs">
+              {t("settings.prompts.translation_helper")}
+            </p>
+            <Textarea
+              value={settings.promptTemplates.translation}
+              onChange={(e) => updatePromptTemplates({ translation: e.target.value })}
+              placeholder={DEFAULT_TRANSLATION_PLACEHOLDER}
+              className="min-h-[120px] font-mono text-xs"
+            />
+          </div>
+
+          <div className="grid gap-2">
+            <div className="flex items-center justify-between">
+              <Label>{t("settings.prompts.definition_label")}</Label>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  updatePromptTemplates({
+                    definition: DEFAULT_DEFINITION_PLACEHOLDER,
+                  });
+                  toast.success(t("settings.prompts.reset_success"));
+                }}
+                className="text-xs"
+              >
+                {t("settings.prompts.reset")}
+              </Button>
+            </div>
+            <p className="text-muted-foreground text-xs">
+              {t("settings.prompts.definition_helper")}
+            </p>
+            <Textarea
+              value={settings.promptTemplates.definition}
+              onChange={(e) => updatePromptTemplates({ definition: e.target.value })}
+              placeholder={DEFAULT_DEFINITION_PLACEHOLDER}
+              className="min-h-[120px] font-mono text-xs"
+            />
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
+
+const DEFAULT_TRANSLATION_PLACEHOLDER =
+  "Translate the following text into {target_lang}. Note that you should only output the translated result without any additional explanation:\n\n{source_text}";
+
+const DEFAULT_DEFINITION_PLACEHOLDER =
+  "You are a bilingual dictionary expert. Your task is to generate a detailed Chinese explanation for a given English word...";

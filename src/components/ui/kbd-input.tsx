@@ -1,74 +1,81 @@
-import * as React from "react"
+import * as React from "react";
 
-import { cn } from "@/lib/utils"
-import { Kbd, KbdGroup } from "@/components/ui/kbd"
+import { cn } from "@/lib/utils";
+import { Kbd, KbdGroup } from "@/components/ui/kbd";
 
 interface KbdInputProps extends Omit<React.ComponentProps<"input">, "onKeyDown" | "onChange"> {
-  value?: string
-  onChange?: (value: string) => void
-  onKeyDown?: (event: React.KeyboardEvent<HTMLInputElement>) => void
+  value?: string;
+  onChange?: (value: string) => void;
+  onKeyDown?: (event: React.KeyboardEvent<HTMLInputElement>) => void;
 }
 
 function KbdInput({ className, value = "", onChange, onKeyDown, ...props }: KbdInputProps) {
-  const inputRef = React.useRef<HTMLInputElement>(null)
+  const inputRef = React.useRef<HTMLInputElement>(null);
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    event.preventDefault()
+    event.preventDefault();
 
-    const keys: string[] = []
+    const keys: string[] = [];
 
-    // Add modifiers
-    if (event.ctrlKey || event.metaKey) {
-      keys.push("Mod")
+    // Use platform-appropriate modifier:
+    // - Ctrl on Windows/Linux for ctrlKey
+    // - Mod (Cmd) on macOS for metaKey (Cmd+C)
+    // tauri-plugin-global-shortcut Shortcut::parse() expects "Ctrl" on Windows
+    // and "Mod" only works for macOS Cmd shortcuts.
+    if (event.ctrlKey) {
+      keys.push("Ctrl");
+    }
+    if (event.metaKey) {
+      keys.push("Mod");
     }
     if (event.shiftKey && event.key !== "Shift") {
-      keys.push("Shift")
+      keys.push("Shift");
     }
     if (event.altKey && event.key !== "Alt") {
-      keys.push("Alt")
+      keys.push("Alt");
     }
 
     // Add the main key (if it's not a modifier)
-    const key = event.key
+    const key = event.key;
     if (!["Control", "Meta", "Shift", "Alt"].includes(key)) {
       // Format the key name
-      let formattedKey = key
+      let formattedKey = key;
       if (key === " ") {
-        formattedKey = "Space"
+        formattedKey = "Space";
       } else if (key.length === 1) {
-        formattedKey = key.toUpperCase()
+        formattedKey = key.toUpperCase();
       } else {
         // Capitalize first letter for keys like "Enter", "Escape", etc.
-        formattedKey = key.charAt(0).toUpperCase() + key.slice(1)
+        formattedKey = key.charAt(0).toUpperCase() + key.slice(1);
       }
-      keys.push(formattedKey)
+      keys.push(formattedKey);
     }
 
-    // Only update if we have a complete shortcut
-    if (keys.length > 0 && !["Shift", "Alt", "Mod"].includes(keys[keys.length - 1])) {
-      const shortcut = keys.join("+")
-      onChange?.(shortcut)
+    // Only update if we have a complete shortcut (main key is present)
+    if (keys.length > 0 && !["Shift", "Alt", "Ctrl", "Mod"].includes(keys[keys.length - 1])) {
+      const shortcut = keys.join("+");
+      onChange?.(shortcut);
     }
 
     // Call custom onKeyDown if provided
-    onKeyDown?.(event)
-  }
+    onKeyDown?.(event);
+  };
 
   // Parse the value and render as kbd elements
   const renderKbds = () => {
     if (!value || value.trim() === "") {
-      return null
+      return null;
     }
 
-    const keys = value.split("+")
+    const keys = value.split("+");
     return (
       <KbdGroup className="gap-1">
         {keys.map((key, index) => (
           <Kbd key={index}>{key === " " || key === "" ? "Space" : key}</Kbd>
         ))}
       </KbdGroup>
-    )
-  }
+    );
+  };
 
   return (
     <div className="relative">
@@ -101,7 +108,7 @@ function KbdInput({ className, value = "", onChange, onKeyDown, ...props }: KbdI
         {...props}
       />
     </div>
-  )
+  );
 }
 
-export { KbdInput }
+export { KbdInput };

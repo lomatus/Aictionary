@@ -45,25 +45,29 @@ function determineErrorCode(message: string): DictionaryErrorCode {
   return "UNKNOWN";
 }
 
+export type Suggestion =
+  | { type: "Prefix"; words: string[] }
+  | { type: "Spellcheck"; candidates: Array<{ word: string; distance: number }> }
+  | { type: "Lemma"; lemma: string };
+
+export type QueryResult = {
+  entry: WordDefinition | null;
+  suggestion: Suggestion | null;
+};
+
 export async function queryDictionary(
   word: string,
-  cachePath: string
-): Promise<WordDefinition> {
+  dictType?: string
+): Promise<QueryResult> {
   const trimmedWord = word.trim();
   if (!trimmedWord) {
     throw new DictionaryQueryError("Word is required", "INVALID_WORD");
   }
 
-  const trimmedCachePath = cachePath.trim();
-  if (!trimmedCachePath) {
-    throw new DictionaryQueryError("Dictionary cache path is missing", "MISSING_CACHE_PATH");
-  }
-
   try {
-    return await invoke<WordDefinition>("dictionary_query", {
+    return await invoke<QueryResult>("dictionary_query", {
       word: trimmedWord,
-      cache_path: trimmedCachePath,
-      cachePath: trimmedCachePath,
+      dictType: dictType ?? null,
     });
   } catch (error) {
     const message = parseErrorMessage(error);
@@ -73,17 +77,37 @@ export async function queryDictionary(
 
 export async function writeDictionaryEntry(
   definition: WordDefinition,
-  cachePath: string
+  dictType?: string
 ) {
-  const trimmedCachePath = cachePath.trim();
-  if (!trimmedCachePath) {
-    throw new DictionaryQueryError("Dictionary cache path is missing", "MISSING_CACHE_PATH");
-  }
-
   await invoke("upsert_dictionary_entry", {
     args: {
-      cachePath: trimmedCachePath,
       entry: definition,
+      dictType: dictType ?? "en_zh",
     },
   });
+}
+
+/** Detects whether input text is primarily Chinese (CJK Unified Ideographs). */
+export function detectLanguage(text: string): string {
+  const cjkRegex = /[\u4e00-\u9fff\u3400-\u4dbf]/;
+  return cjkRegex.test(text) ? "zh" : "en";
+}
+
+/** Detects the language pair based on input language and dictType setting. */
+export function resolvePairId(dictType: string, inputLang: string): string {
+  if (dictType === "auto") {
+    // Map source language to default target for that source
+    const pairMap: Record<string, string> = {
+      en: "en_zh",
+      zh: "zh_en",
+      es: "en_es",
+    };
+    return pairMap[inputLang] ?? "en_zh";
+  }
+  return dictType;
+}
+
+/** Returns true if input looks like a sentence/phrase (not a single word). */
+export function isSentence(text: string): boolean {
+  return text.includes(" ") || text.length > 30;
 }

@@ -30,6 +30,11 @@ export function useSettings() {
       keyboard: { ...defaultSettings.keyboard, ...(current.keyboard ?? {}) },
       about: { ...defaultSettings.about, ...(current.about ?? {}) },
       system: { ...defaultSettings.system, ...(current.system ?? {}) },
+      glossary: current.glossary ?? defaultSettings.glossary,
+      promptTemplates: {
+        ...defaultSettings.promptTemplates,
+        ...(current.promptTemplates ?? {}),
+      },
     }),
     []
   );
@@ -166,6 +171,26 @@ export function useSettings() {
     [updateSettings]
   );
 
+  const updateGlossary = useCallback(
+    (entries: AppSettings["glossary"]) => {
+      updateSettings((current) => ({
+        ...current,
+        glossary: entries,
+      }));
+    },
+    [updateSettings]
+  );
+
+  const updatePromptTemplates = useCallback(
+    (changes: Partial<AppSettings["promptTemplates"]>) => {
+      updateSettings((current) => ({
+        ...current,
+        promptTemplates: { ...current.promptTemplates, ...changes },
+      }));
+    },
+    [updateSettings]
+  );
+
   return {
     settings,
     updateSettings,
@@ -177,5 +202,7 @@ export function useSettings() {
     updateKeyboard,
     updateLanguage,
     updateSystem,
+    updateGlossary,
+    updatePromptTemplates,
   };
 }

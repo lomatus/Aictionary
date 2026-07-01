@@ -1,5 +1,5 @@
 import { useAtom, useSetAtom } from "jotai";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
@@ -9,15 +9,20 @@ import {
   generatingModelAtom,
   queryHistoryAtom,
   setCurrentResultAtom,
+  translationResultAtom,
 } from "@/shared/state/dictionary";
 import { settingsAtom } from "@/shared/state/settings";
 import {
   queryDictionary,
   DictionaryQueryError,
-  writeDictionaryEntry,
+  detectLanguage,
+  resolvePairId,
+  isSentence,
+  type QueryResult,
+  type Suggestion,
 } from "@/shared/services/dictionary-service";
 import {
-  generateDefinitionFromLlm,
+  translateText,
   hasLlmCredentials,
   LlmServiceError,
 } from "@/shared/services/llm-service";
@@ -30,7 +35,39 @@ export function useDictionarySearch() {
   const [history] = useAtom(queryHistoryAtom);
   const [result] = useAtom(currentResultAtom);
   const setResult = useSetAtom(setCurrentResultAtom);
+  const [translationResult, setTranslationResult] = useAtom(translationResultAtom);
   const [settings] = useAtom(settingsAtom);
+
+  // Local state for suggestions — avoids atom re-render timing issues
+  const [suggestion, setSuggestion] = useState<Suggestion | null>(null);
+  const [lastQuery, setLastQuery] = useState("");
+
+  // Real-time suggestion lookup (no LLM, no history write)
+  const suggest = useCallback(
+    async (word: string) => {
+      const normalized = word.trim();
+      if (normalized.length < 2) {
+        setSuggestion(null);
+        return;
+      }
+
+      const inputLang = detectLanguage(normalized);
+      const pairId = resolvePairId(settings.dictionary.dictType, inputLang);
+
+      try {
+        const queryResult: QueryResult = await queryDictionary(normalized, pairId);
+        if (queryResult.suggestion) {
+          setSuggestion(queryResult.suggestion);
+          setLastQuery(normalized);
+        } else {
+          setSuggestion(null);
+        }
+      } catch {
+        setSuggestion(null);
+      }
+    },
+    [settings.dictionary.dictType]
+  );
 
   const search = useCallback(
     async (word: string) => {
@@ -40,66 +77,79 @@ export function useDictionarySearch() {
         return;
       }
 
+      // Clear translation result when searching
+      setTranslationResult(null);
+
+      const inputLang = detectLanguage(normalized);
+      const pairId = resolvePairId(settings.dictionary.dictType, inputLang);
+
       setIsSearching(true);
+      setSuggestion(null);
+      setLastQuery(normalized);
+
       try {
-        const definition = await queryDictionary(
-          normalized,
-          settings.dictionary.cachePath
-        );
-        setResult({ result: definition, word: normalized });
-      } catch (error) {
-        if (
-          error instanceof DictionaryQueryError &&
-          error.code === "NOT_FOUND"
-        ) {
-          if (!settings.dictionary.cachePath.trim()) {
-            toast.error(t("main.llm.missing_cache_path"));
-            return;
-          }
+        const queryResult: QueryResult = await queryDictionary(normalized, pairId);
 
-          if (!hasLlmCredentials(settings.llm)) {
-            toast.error(t("main.llm.missing_config"));
-            return;
-          }
-
-          // Clear existing result and show LLM generating state
-          setResult({ result: null });
-          setGeneratingModel(settings.llm.model);
-          setIsGeneratingFromLlm(true);
-
-          try {
-            const aiDefinition = await generateDefinitionFromLlm(
-              normalized,
-              settings.llm
-            );
-            setResult({ result: aiDefinition, word: normalized });
-            toast.success(
-              t("main.llm.success", { model: settings.llm.model })
-            );
-            try {
-              await writeDictionaryEntry(
-                aiDefinition,
-                settings.dictionary.cachePath
-              );
-            } catch (persistError) {
-              console.error(persistError);
-              toast.warning(t("main.llm.cache_error"));
-            }
-            return;
-          } catch (llmError) {
-            console.error(llmError);
-            const message =
-              llmError instanceof LlmServiceError
-                ? llmError.message
-                : t("main.llm.error");
-            toast.error(message);
-          } finally {
-            setIsGeneratingFromLlm(false);
-            setGeneratingModel(null);
-          }
+        if (queryResult.entry) {
+          setSuggestion(null);
+          setResult({ result: queryResult.entry, word: normalized });
           return;
         }
 
+        if (queryResult.suggestion) {
+          setSuggestion(queryResult.suggestion);
+          setResult({ result: null, word: normalized });
+          return;
+        }
+
+        // No entry, no suggestion — handle sentence/phrase vs single word
+        if (!isSentence(normalized)) {
+          toast.error(t("main.llm.not_found_word"));
+          setIsSearching(false);
+          return;
+        }
+
+        if (!settings.dictionary.cachePath.trim()) {
+          toast.error(t("main.llm.missing_cache_path"));
+          setIsSearching(false);
+          return;
+        }
+
+        if (!hasLlmCredentials(settings.llm)) {
+          toast.error(t("main.llm.missing_config"));
+          setIsSearching(false);
+          return;
+        }
+
+        setResult({ result: null });
+        setGeneratingModel(settings.llm.model);
+        setIsGeneratingFromLlm(true);
+
+        try {
+          // Detect target language from pairId (e.g., en_zh → Chinese)
+          const targetLang = pairId.includes("zh") ? "Chinese" : "Spanish";
+          const translated = await translateText(normalized, targetLang, settings.llm, {
+            template: settings.promptTemplates.translation || undefined,
+            glossary: settings.glossary,
+          });
+          setTranslationResult(translated);
+        } catch (llmError) {
+          console.error(llmError);
+          let message: string;
+          if (llmError instanceof LlmServiceError) {
+            // Show the cause message if available (e.g., "invalid API key", "model not found")
+            message = llmError.cause
+              ? llmError.message
+              : t("main.llm.error");
+          } else {
+            message = t("main.llm.error");
+          }
+          toast.error(message);
+        } finally {
+          setIsGeneratingFromLlm(false);
+          setGeneratingModel(null);
+        }
+      } catch (error) {
         console.error(error);
         const fallbackMessage =
           error instanceof DictionaryQueryError
@@ -115,7 +165,9 @@ export function useDictionarySearch() {
       setIsSearching,
       setIsGeneratingFromLlm,
       setGeneratingModel,
+      setTranslationResult,
       settings.dictionary.cachePath,
+      settings.dictionary.dictType,
       settings.llm,
       t,
     ]
@@ -123,7 +175,14 @@ export function useDictionarySearch() {
 
   const clear = useCallback(() => {
     setResult({ result: null });
-  }, [setResult]);
+    setSuggestion(null);
+    setTranslationResult(null);
+    setLastQuery("");
+  }, [setResult, setSuggestion, setTranslationResult]);
+
+  const clearSuggestion = useCallback(() => {
+    setSuggestion(null);
+  }, [setSuggestion]);
 
   return {
     isSearching,
@@ -131,7 +190,12 @@ export function useDictionarySearch() {
     generatingModel,
     history,
     result,
+    suggestion,
+    lastQuery,
+    translationResult,
     search,
+    suggest,
     clear,
+    clearSuggestion,
   };
 }

@@ -21,7 +21,20 @@
       "placeholder": "Search a word…",
       "searching": "Searching…",
       "button": "Search",
-      "empty_error": "Please enter a word to search."
+      "empty_error": "Please enter a word to search.",
+      "dict_type": {
+        "auto": "Auto",
+        "en_zh": "英汉",
+        "zh_en": "汉英"
+      },
+      "suggestion": {
+        "prefix": "Words starting with \"{{query}}\":",
+        "spellcheck": "Did you mean:",
+        "lemma": "\"{{query}}\" — its base form is \"{{lemma}}\"",
+        "view_lemma": "View {{lemma}}",
+        "distance_one": "edit distance 1",
+        "distance": "edit distance {{n}}"
+      }
     },
     "history": {
       "title": "Recent queries"
@@ -41,18 +54,15 @@
       "title": "Compare with",
       "description": "Understand nuances between related words."
     },
-    "definitions": {
-      "example_label_zh": "例句：",
-      "example_label_en": "Example:"
-    },
     "llm": {
       "missing_config": "The word isn't cached locally and no AI provider is configured yet.",
       "missing_cache_path": "Set a dictionary cache path before asking the AI to help.",
+      "not_found_word": "Word not found in dictionary. Try a phrase or sentence for AI translation.",
       "generating": "Generating a definition via {{model}}…",
-      "generating_status": "Generating definition via {{model}}…",
-      "success": "Definition saved locally using {{model}}.",
-      "error": "The AI provider couldn't produce a definition. Please try again later.",
-      "cache_error": "Definition shown, but writing to the cache failed. Check the directory permissions."
+      "generating_status": "Generating translation via {{model}}…",
+      "success": "Translation complete using {{model}}.",
+      "error": "The AI provider couldn't produce a translation. Please try again later.",
+      "cache_error": "Translation shown, but writing to the cache failed."
     },
     "errors": {
       "dictionary": "Unable to query the dictionary. Please try again later."
@@ -137,7 +147,9 @@
       "anki": "Anki",
       "dictionary": "Dictionary",
       "keyboard": "Keyboard",
-      "about": "About"
+      "about": "About",
+      "prompts": "Prompts",
+      "glossary": "Glossary"
     },
     "appearance": {
       "title": "Theme",
@@ -317,6 +329,27 @@
         "reset": "Keyboard shortcuts restored."
       }
     },
+    "prompts": {
+      "title": "Prompt Templates",
+      "description": "Customize the system prompts used for LLM-powered translation and definition generation.",
+      "translation_label": "Translation Prompt",
+      "translation_helper": "Use {source_text} for the input text and {target_lang} for the target language.",
+      "definition_label": "Definition Prompt",
+      "definition_helper": "The system prompt used when generating word definitions via LLM.",
+      "reset": "Reset",
+      "reset_success": "Prompt template reset."
+    },
+    "glossary": {
+      "title": "Terminology Glossary",
+      "description": "Define domain-specific terms to ensure consistent translations.",
+      "helper": "Terms defined here are injected as context into LLM translation requests.",
+      "source": "Source Term",
+      "target": "Target Translation",
+      "notes": "Notes",
+      "notes_placeholder": "e.g. Medical, Legal, etc.",
+      "add": "Add term",
+      "reset_success": "Glossary reset."
+    },
     "about": {
       "info": {
         "title": "Application info",
@@ -348,7 +381,10 @@
       "complete": "Download complete!",
       "error": "Download failed",
       "close": "Close",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "dict_type_label": "Dictionary type",
+      "dict_type_en_zh": "英汉 (English ↔ Chinese)",
+      "dict_type_zh_en": "汉英 (Chinese → English)"
     }
   }
 }

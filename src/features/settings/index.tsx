@@ -8,6 +8,7 @@ import { DictionaryTab } from "@/features/settings/components/dictionary-tab";
 import { KeyboardTab } from "@/features/settings/components/keyboard-tab";
 import { AboutTab } from "@/features/settings/components/about-tab";
 import { AnkiTab } from "@/features/settings/components/anki-tab";
+import { GlossaryTab } from "@/features/settings/components/glossary-tab";
 
 const tabs = [
   { value: "appearance", labelKey: "settings.tabs.appearance" },
@@ -15,6 +16,7 @@ const tabs = [
   { value: "audio", labelKey: "settings.tabs.audio" },
   { value: "anki", labelKey: "settings.tabs.anki" },
   { value: "dictionary", labelKey: "settings.tabs.dictionary" },
+  { value: "glossary", labelKey: "settings.tabs.glossary" },
   { value: "keyboard", labelKey: "settings.tabs.keyboard" },
   { value: "about", labelKey: "settings.tabs.about" },
 ] as const;
@@ -66,6 +68,9 @@ export function SettingsPage() {
       </TabsContent>
       <TabsContent value="dictionary">
         <DictionaryTab />
+      </TabsContent>
+      <TabsContent value="glossary">
+        <GlossaryTab />
       </TabsContent>
       <TabsContent value="keyboard">
         <KeyboardTab />

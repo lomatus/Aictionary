@@ -1,4 +1,3 @@
-import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -8,13 +7,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { WordDefinition } from "@/shared/types/dictionary";
+import { cn } from "@/lib/utils";
 
 type DefinitionsListProps = {
   definition: WordDefinition;
 };
 
 export function DefinitionsList({ definition }: DefinitionsListProps) {
-  const { t } = useTranslation();
   return (
     <div className="grid gap-4">
       {definition.definitions.map((item, index) => (
@@ -34,8 +33,24 @@ export function DefinitionsList({ definition }: DefinitionsListProps) {
           </CardHeader>
           <CardContent className="flex flex-col gap-3 text-sm">
             <div className="rounded-lg border border-border bg-muted/50 p-4">
-              <p className="font-medium text-foreground">{t("main.definitions.example_label_zh")}{item.example_cn}</p>
-              <p className="text-muted-foreground">{t("main.definitions.example_label_en")} {item.example_en}</p>
+              <p className="font-medium text-foreground">
+                <span className={cn(
+                  "bg-primary text-primary-foreground",
+                  "inline-block rounded px-1.5 py-0.5 text-xs font-bold mr-2 mb-1"
+                )}>
+                  示例
+                </span>
+                {item.example_cn}
+              </p>
+              <p className="text-muted-foreground mt-1">
+                <span className={cn(
+                  "bg-primary text-primary-foreground",
+                  "inline-block rounded px-1.5 py-0.5 text-xs font-bold mr-2"
+                )}>
+                  Exp.
+                </span>
+                {item.example_en}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -43,4 +58,3 @@ export function DefinitionsList({ definition }: DefinitionsListProps) {
     </div>
   );
 }
-

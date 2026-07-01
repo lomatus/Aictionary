@@ -1,75 +1,40 @@
 use std::fs;
 use tauri::{AppHandle, Manager};
 
+use super::db::{db, query_word, bulk_import, count_entries, has_entries, list_enabled_pairs, upsert_entry, LanguagePair, QueryResult};
 use super::types::{UpsertDictionaryEntryArgs, WordDefinition};
 use super::utils::resolve_cache_dir;
 
-/// Query the dictionary for a word definition.
-/// Reads from the cache directory at {cache_path}/{word}.json
 #[tauri::command]
-pub fn dictionary_query(word: String, cache_path: String) -> Result<WordDefinition, String> {
+pub fn dictionary_query(word: String, dict_type: Option<String>) -> Result<QueryResult, String> {
     let word = word.trim();
-    let cache_path = cache_path.trim();
-
     if word.is_empty() {
         return Err("Word is required".into());
     }
 
-    if cache_path.is_empty() {
-        return Err("Dictionary cache path is not configured".into());
-    }
+    let pair_id = dict_type.unwrap_or_else(|| "en_zh".to_string());
 
-    let cache_dir = resolve_cache_dir(cache_path)?;
-    let file_path = cache_dir.join(format!("{}.json", word.to_lowercase()));
-
-    if !file_path.exists() {
-        return Err(format!("Word '{}' not found in dictionary", word));
-    }
-
-    let content = fs::read_to_string(&file_path)
-        .map_err(|err| format!("Failed to read dictionary file: {}", err))?;
-
-    let definition: WordDefinition = serde_json::from_str(&content)
-        .map_err(|err| format!("Failed to parse dictionary data: {}", err))?;
-
-    Ok(definition)
+    let conn = db().lock();
+    query_word(&conn, word, &pair_id)
+        .map_err(|e| format!("Dictionary query failed: {}", e))
 }
 
-/// Insert or update a dictionary entry in the cache.
-/// Writes to {cache_path}/{word}.json
 #[tauri::command]
 pub fn upsert_dictionary_entry(args: UpsertDictionaryEntryArgs) -> Result<(), String> {
-    let UpsertDictionaryEntryArgs {
-        cache_path,
-        mut entry,
-    } = args;
-    let cache_path = cache_path.trim();
-    if cache_path.is_empty() {
-        return Err("Dictionary cache path is not configured".into());
-    }
+    let UpsertDictionaryEntryArgs { entry, dict_type, .. } = args;
 
     let word = entry.word.trim().to_string();
     if word.is_empty() {
         return Err("Word is required".into());
     }
 
-    let cache_dir = resolve_cache_dir(cache_path)?;
-    fs::create_dir_all(&cache_dir)
-        .map_err(|err| format!("Failed to prepare cache directory: {}", err))?;
+    let pair_id = if dict_type.is_empty() { "en_zh" } else { &dict_type };
 
-    entry.word = word.clone();
-
-    let payload = serde_json::to_string_pretty(&entry)
-        .map_err(|err| format!("Failed to serialize dictionary entry: {}", err))?;
-    let file_path = cache_dir.join(format!("{}.json", word.to_lowercase()));
-    fs::write(&file_path, payload)
-        .map_err(|err| format!("Failed to write dictionary entry: {}", err))?;
-
-    Ok(())
+    let conn = db().lock();
+    upsert_entry(&conn, &entry, pair_id, "llm")
+        .map_err(|e| format!("Failed to save entry: {}", e))
 }
 
-/// Get the default dictionary cache path.
-/// Creates the directory if it doesn't exist.
 #[tauri::command]
 pub fn get_default_dictionary_path(app: AppHandle) -> Result<String, String> {
     let app_dir = app.path().app_data_dir().map_err(|err| err.to_string())?;
@@ -78,69 +43,71 @@ pub fn get_default_dictionary_path(app: AppHandle) -> Result<String, String> {
     Ok(dict_path.to_string_lossy().into())
 }
 
-/// Check if the dictionary cache directory exists and contains JSON files.
-/// Returns true if at least one .json file is found, false otherwise.
 #[tauri::command]
-pub fn check_dictionary_cache_exists(cache_path: String) -> Result<bool, String> {
-    let cache_path = cache_path.trim();
-    if cache_path.is_empty() {
-        return Ok(false);
-    }
-
-    let cache_dir = resolve_cache_dir(cache_path).map_err(|err| err.to_string())?;
-
-    if !cache_dir.exists() || !cache_dir.is_dir() {
-        return Ok(false);
-    }
-
-    let has_json_files = fs::read_dir(&cache_dir)
-        .map_err(|err| err.to_string())?
-        .filter_map(|entry| entry.ok())
-        .any(|entry| {
-            entry
-                .path()
-                .extension()
-                .and_then(|ext| ext.to_str())
-                .map(|ext| ext.eq_ignore_ascii_case("json"))
-                .unwrap_or(false)
-        });
-
-    Ok(has_json_files)
+pub fn check_dictionary_cache_exists(_cache_path: String) -> Result<bool, String> {
+    let conn = db().lock();
+    let count = count_entries(&conn, None).map_err(|e| e.to_string())?;
+    Ok(count > 0)
 }
 
-/// Count the number of dictionary entry files in the cache directory.
-/// Returns the number of `.json` files found directly under the cache path.
 #[tauri::command]
-pub fn count_dictionary_entries(cache_path: String) -> Result<u64, String> {
-    let cache_path = cache_path.trim();
-    if cache_path.is_empty() {
-        return Ok(0);
+pub fn count_dictionary_entries(_cache_path: String, dict_type: Option<String>) -> Result<u64, String> {
+    let conn = db().lock();
+    count_entries(&conn, dict_type.as_deref())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_language_pairs() -> Result<Vec<LanguagePair>, String> {
+    let conn = db().lock();
+    list_enabled_pairs(&conn).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn import_dictionary_from_dir(source_dir: String, dict_type: String) -> Result<usize, String> {
+    let source_dir = resolve_cache_dir(&source_dir)?;
+    if !source_dir.exists() {
+        return Err("Source directory does not exist".into());
     }
 
-    let cache_dir = resolve_cache_dir(cache_path).map_err(|err| err.to_string())?;
-
-    if !cache_dir.exists() || !cache_dir.is_dir() {
-        return Ok(0);
-    }
-
-    let mut count: u64 = 0;
-
-    let entries = fs::read_dir(&cache_dir).map_err(|err| err.to_string())?;
-    for entry in entries {
-        let entry = match entry {
-            Ok(e) => e,
-            Err(_) => continue,
-        };
-
-        let path = entry.path();
-        if path.is_file() {
-            if let Some(ext) = path.extension().and_then(|ext| ext.to_str()) {
-                if ext.eq_ignore_ascii_case("json") {
-                    count += 1;
-                }
+    let mut count = 0;
+    let entries: Vec<WordDefinition> = {
+        let mut entries = Vec::new();
+        let dir = fs::read_dir(&source_dir).map_err(|e| e.to_string())?;
+        for entry in dir {
+            let entry = entry.map_err(|e| e.to_string())?;
+            let path = entry.path();
+            if path.extension().and_then(|s| s.to_str()) != Some("json") {
+                continue;
+            }
+            let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
+            match serde_json::from_str::<WordDefinition>(&content) {
+                Ok(word_entry) => entries.push(word_entry),
+                Err(e) => eprintln!("Skipping {:?}: {}", path, e),
             }
         }
-    }
+        entries
+    };
 
+    let conn = db().lock();
+    for entry in &entries {
+        if upsert_entry(&conn, entry, &dict_type, "builtin").is_ok() {
+            count += 1;
+        }
+    }
     Ok(count)
+}
+
+#[tauri::command]
+pub fn is_sentence(text: String) -> bool {
+    text.contains(' ') || text.len() > 30
+}
+
+#[tauri::command]
+pub fn get_actual_db_path() -> Result<String, String> {
+    let app_dir = dirs::data_local_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+        .join("aictionary-re");
+    let db_file = app_dir.join("dictionary.db");
+    Ok(db_file.to_string_lossy().into_owned())
 }

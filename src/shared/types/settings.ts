@@ -23,9 +23,20 @@ export type AnkiSettings = {
   cardTheme: "light" | "dark";
 };
 
+export type LanguagePair = {
+  id: string;
+  source_lang: string;
+  target_lang: string;
+  name: string;
+  name_en: string;
+  spellcheck: boolean;
+  enabled: boolean;
+};
+
 export type DictionarySettings = {
   cachePath: string;
   lastUpdated: string | null;
+  dictType: string; // e.g. "en_zh", "zh_en", "auto"
 };
 
 export type KeyboardShortcutSettings = {
@@ -34,17 +45,27 @@ export type KeyboardShortcutSettings = {
   enabled: boolean;
 };
 
+export type GlossaryEntry = {
+  id: string;
+  source: string;
+  target: string;
+  notes: string;
+  category: string;
+};
+
+export type PromptTemplateSettings = {
+  translation: string;
+  definition: string;
+};
+
 export type AboutMetadata = {
   version: string;
   build: string;
 };
 
 export type SystemSettings = {
-  /** Whether the tray icon should be visible on supported desktop platforms. */
   trayIconEnabled: boolean;
-  /** Whether the app should start automatically when the user logs in. */
   launchOnSystemStart: boolean;
-  /** Whether the app's dock / taskbar icon should be shown when the tray is enabled. */
   dockOrTaskbarVisible: boolean;
 };
 
@@ -58,4 +79,6 @@ export type AppSettings = {
   keyboard: KeyboardShortcutSettings;
   about: AboutMetadata;
   system: SystemSettings;
+  glossary: GlossaryEntry[];
+  promptTemplates: PromptTemplateSettings;
 };
