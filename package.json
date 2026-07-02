@@ -1,8 +1,7 @@
 {
-  "name": "aictionary-re",
+"name": "aictionary",
   "private": true,
-  "version": "0.1.0",
-  "type": "module",
+  "version": "2.2.0",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
