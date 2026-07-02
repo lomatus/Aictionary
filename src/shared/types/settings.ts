@@ -11,6 +11,17 @@ export type LlmProvider = {
   model: string;
 };
 
+export type LocalLlmSettings = {
+  enabled: boolean;
+  llamaCppPath: string; // Path to llama.cpp binary
+  modelPath: string; // Path to model file
+  modelUrl: string; // Download URL for the model
+  nCtx: number; // Context size
+  nGpu: number; // GPU layers (0 = CPU only)
+  isDownloading: boolean;
+  downloadProgress: number;
+};
+
 export type AudioSettings = {
   apiKey: string;
   model: string;
@@ -73,6 +84,7 @@ export type AppSettings = {
   theme: ThemePreference;
   language: LanguagePreference;
   llm: LlmProvider;
+  localLlm: LocalLlmSettings;
   audio: AudioSettings;
   anki: AnkiSettings;
   dictionary: DictionarySettings;

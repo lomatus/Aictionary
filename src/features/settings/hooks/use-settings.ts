@@ -20,6 +20,7 @@ export function useSettings() {
       ...current,
       theme: { ...defaultSettings.theme, ...(current.theme ?? {}) },
       llm: { ...defaultSettings.llm, ...(current.llm ?? {}) },
+      localLlm: { ...defaultSettings.localLlm, ...(current.localLlm ?? {}) },
       audio: { ...defaultSettings.audio, ...(current.audio ?? {}) },
       anki: {
         ...defaultSettings.anki,
@@ -71,6 +72,23 @@ export function useSettings() {
           typeof changes === "function"
             ? changes(current.llm)
             : { ...current.llm, ...changes },
+      }));
+    },
+    [updateSettings]
+  );
+
+  const updateLocalLlm = useCallback(
+    (
+      changes:
+        | Partial<AppSettings["localLlm"]>
+        | ((prev: AppSettings["localLlm"]) => AppSettings["localLlm"])
+    ) => {
+      updateSettings((current) => ({
+        ...current,
+        localLlm:
+          typeof changes === "function"
+            ? changes(current.localLlm)
+            : { ...current.localLlm, ...changes },
       }));
     },
     [updateSettings]
@@ -196,6 +214,7 @@ export function useSettings() {
     updateSettings,
     updateTheme,
     updateLlm,
+    updateLocalLlm,
     updateAudio,
     updateAnki,
     updateDictionary,

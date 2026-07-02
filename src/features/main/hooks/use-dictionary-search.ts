@@ -38,17 +38,14 @@ export function useDictionarySearch() {
   const [translationResult, setTranslationResult] = useAtom(translationResultAtom);
   const [settings] = useAtom(settingsAtom);
 
-  // Local state for suggestions — avoids atom re-render timing issues
   const [suggestion, setSuggestion] = useState<Suggestion | null>(null);
   const [lastQuery, setLastQuery] = useState("");
-
-  // Real-time suggestion lookup (no LLM, no history write)
   const suggest = useCallback(
-    async (word: string) => {
+    async (word: string): Promise<string[]> => {
       const normalized = word.trim();
       if (normalized.length < 2) {
         setSuggestion(null);
-        return;
+        return [];
       }
 
       const inputLang = detectLanguage(normalized);
@@ -59,11 +56,18 @@ export function useDictionarySearch() {
         if (queryResult.suggestion) {
           setSuggestion(queryResult.suggestion);
           setLastQuery(normalized);
+          const s = queryResult.suggestion;
+          if (s.type === "Prefix") return s.words;
+          if (s.type === "Spellcheck") return s.candidates.map((c) => c.word);
+          if (s.type === "Lemma") return [s.lemma];
+          return [];
         } else {
           setSuggestion(null);
+          return [];
         }
       } catch {
         setSuggestion(null);
+        return [];
       }
     },
     [settings.dictionary.dictType]
@@ -77,11 +81,11 @@ export function useDictionarySearch() {
         return;
       }
 
-      // Clear translation result when searching
       setTranslationResult(null);
 
       const inputLang = detectLanguage(normalized);
       const pairId = resolvePairId(settings.dictionary.dictType, inputLang);
+      console.log("[search] inputLang:", inputLang, "dictType:", settings.dictionary.dictType, "pairId:", pairId);
 
       setIsSearching(true);
       setSuggestion(null);
@@ -89,20 +93,22 @@ export function useDictionarySearch() {
 
       try {
         const queryResult: QueryResult = await queryDictionary(normalized, pairId);
+        console.log("[search] queryResult:", JSON.stringify(queryResult));
 
         if (queryResult.entry) {
           setSuggestion(null);
           setResult({ result: queryResult.entry, word: normalized });
+          setIsSearching(false);
           return;
         }
 
         if (queryResult.suggestion) {
           setSuggestion(queryResult.suggestion);
           setResult({ result: null, word: normalized });
+          setIsSearching(false);
           return;
         }
 
-        // No entry, no suggestion — handle sentence/phrase vs single word
         if (!isSentence(normalized)) {
           toast.error(t("main.llm.not_found_word"));
           setIsSearching(false);
@@ -126,7 +132,6 @@ export function useDictionarySearch() {
         setIsGeneratingFromLlm(true);
 
         try {
-          // Detect target language from pairId (e.g., en_zh → Chinese)
           const targetLang = pairId.includes("zh") ? "Chinese" : "Spanish";
           const translated = await translateText(normalized, targetLang, settings.llm, {
             template: settings.promptTemplates.translation || undefined,
@@ -135,15 +140,12 @@ export function useDictionarySearch() {
           setTranslationResult(translated);
         } catch (llmError) {
           console.error(llmError);
-          let message: string;
-          if (llmError instanceof LlmServiceError) {
-            // Show the cause message if available (e.g., "invalid API key", "model not found")
-            message = llmError.cause
-              ? llmError.message
+          const message =
+            llmError instanceof LlmServiceError
+              ? llmError.cause
+                ? llmError.message
+                : t("main.llm.error")
               : t("main.llm.error");
-          } else {
-            message = t("main.llm.error");
-          }
           toast.error(message);
         } finally {
           setIsGeneratingFromLlm(false);

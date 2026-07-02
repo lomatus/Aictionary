@@ -23,6 +23,16 @@ export const defaultSettings: AppSettings = {
     apiKey: "",
     model: "gpt-4o-mini",
   },
+  localLlm: {
+    enabled: false,
+    llamaCppPath: "",
+    modelPath: "",
+    modelUrl: "https://huggingface.co/gpt-4o-mini-gguf/resolve/main/gpt-4o-mini-Q4_K_M.gguf",
+    nCtx: 4096,
+    nGpu: 0,
+    isDownloading: false,
+    downloadProgress: 0,
+  },
   audio: {
     apiKey: "",
     model: "s1",
@@ -44,8 +54,8 @@ export const defaultSettings: AppSettings = {
     enabled: true,
   },
   about: {
-    version: "0.1.0",
-    build: "dev",
+    version: "2.2.0",
+    build: "production",
   },
   system: {
     trayIconEnabled: true,
