@@ -11,8 +11,8 @@
   "error": {
     "page_not_found": {
       "title": "页面未找到",
-      "description": "您访问的页面不存在。",
-      "action": "返回首页"
+      "description": "我们找不到您要查找的页面。",
+      "go_home": "返回首页"
     }
   },
   "main": {
@@ -22,16 +22,6 @@
       "searching": "搜索中…",
       "button": "搜索",
       "empty_error": "请输入要查询的单词。",
-      "smart_input": {
-        "placeholder": "字典查询或LLM翻译",
-        "mode_translate": "长文本翻译模式",
-        "hint_word": "↵ 查询",
-        "hint_suggestion": "↵/↓ 选择建议",
-        "hint_translate": "↵ 换行 | ⌘/Ctrl ↵ 翻译",
-        "clear": "清空内容",
-        "translate": "翻译",
-        "translate_title": "Ctrl + Enter 翻译"
-      },
       "dict_type": {
         "auto": "自动",
         "en_zh": "英汉",
@@ -44,150 +34,372 @@
         "view_lemma": "查看 {{lemma}}",
         "distance_one": "编辑距离 1",
         "distance": "编辑距离 {{n}}"
+      },
+      "smart_input": {
+        "placeholder": "字典查询或LLM翻译",
+        "mode_translate": "长文本翻译模式",
+        "mode_word": "单词查询模式",
+        "hint_word": "↵ 查询",
+        "hint_suggestion": "↵/↓ 选择建议",
+        "hint_translate": "↵ 换行 | ⌘/Ctrl ↵ 翻译",
+        "clear": "清空内容",
+        "translate": "翻译",
+        "translate_title": "Ctrl + Enter 翻译"
       }
     },
     "history": {
       "title": "最近查询"
     },
     "quick_actions": {
-      "title": "快捷操作",
-      "random_word": "随机词",
-      "export": "导出",
-      "clear_history": "清空历史"
+      "statistics": {
+        "title": "打开统计",
+        "description": "查看已学单词并导出学习记录。"
+      },
+      "settings": {
+        "title": "配置设置",
+        "description": "调整外观、提供商和键盘快捷键。"
+      },
+      "button": "前往"
     },
     "comparison": {
-      "title": "对比释义"
+      "title": "对比词汇",
+      "description": "了解相关单词之间的细微差别。"
     },
     "definitions": {
-      "title": "释义",
-      "no_definitions": "未找到释义"
+      "example_label_zh": "例句：",
+      "example_label_en": "例句："
     },
     "llm": {
-      "not_found_word": "词典中未找到该单词，请尝试输入句子或短语进行 AI 翻译。",
-      "missing_cache_path": "请先在设置中配置词典缓存路径。",
-      "missing_config": "请先在设置中配置 LLM API 密钥。",
-      "error": "AI 翻译失败，请稍后重试。"
+      "missing_config": "该单词不在本地缓存中，且尚未配置 AI 提供商。",
+      "missing_cache_path": "使用 AI 翻译前请先设置词典缓存路径。",
+      "not_found_word": "词典中未找到该单词。可尝试输入短语或句子进行 AI 翻译。",
+      "generating": "正在通过 {{model}} 生成翻译…",
+      "generating_status": "正在通过 {{model}} 生成翻译…",
+      "success": "已使用 {{model}} 完成翻译。",
+      "error": "AI 提供商暂时无法生成翻译，请稍后重试。",
+      "cache_error": "翻译已显示，但写入缓存失败。"
     },
     "errors": {
       "dictionary": "无法查询词典，请稍后再试。"
     },
     "word_summary": {
-      "title": "词汇概要",
-      "pronunciation": "发音",
-      "forms": "词形",
-      "source": "来源"
+      "word_forms": "词形",
+      "third_person": "第三人称",
+      "past_tense": "过去式",
+      "past_participle": "过去分词",
+      "present_participle": "现在分词",
+      "comparative": "比较级",
+      "superlative": "最高级",
+      "plural": "复数",
+      "singular": "单数",
+      "play_pronunciation": "播放发音",
+      "stop_pronunciation": "停止发音",
+      "audio_error": "无法播放发音，请稍后再试。",
+      "audio_not_configured": "请在 设置 → 音频 中配置 Fish Audio API Key 后再播放发音。",
+      "add_to_anki": "保存到 Anki",
+      "anki_success": "已保存卡片到 Anki。",
+      "anki_error": "无法添加到 Anki，请稍后再试。",
+      "anki_not_configured": "请先在 设置 → Anki 中配置 AnkiConnect 地址和牌组。"
     }
   },
   "statistics": {
     "title": "统计",
     "description": "查看您的词典使用情况并导出学习材料。",
     "export": {
-      "title": "导出",
-      "csv": "导出为 CSV",
-      "json": "导出为 JSON",
-      "anki": "导入 Anki",
-      "anki_note": "将您的查询历史作为 Anki 卡片导出。"
+      "learned_words": "导出已学单词",
+      "query_counts": "导出查询次数"
     },
     "overview": {
-      "title": "概览",
-      "total_queries": "总查询次数",
-      "unique_words": "不重复单词",
-      "avg_per_day": "日均查询"
+      "learned_words": {
+        "title": "已学单词",
+        "hint_none": "还没有学过的单词。开始查询以跟踪进度！",
+        "hint_one": "目前学了一个单词。继续探索！",
+        "hint_few": "已学习 {{count}} 个单词。你正在积累动力！",
+        "hint_many": "已学习 {{count}} 个单词。进步很大！",
+        "hint_lots": "已学习 {{count}} 个单词。词汇量令人印象深刻！"
+      },
+      "total_queries": {
+        "title": "总查询次数",
+        "queried_times": "已查询 {{count}} 次。"
+      },
+      "most_frequent": {
+        "title": "最常查询"
+      }
     },
     "top_words": {
-      "title": "高频词"
+      "title": "热门单词",
+      "description": "所有时间内频率最高的单词。",
+      "empty_state": "搜索单词以开始跟踪统计数据。",
+      "table": {
+        "word": "单词",
+        "times_queried": "查询次数",
+        "last_queried": "最后查询"
+      }
     },
     "metrics": {
-      "title": "指标",
-      "retention": "记忆率",
-      "streak": "连续查询天数"
+      "title": "时间趋势",
+      "description": "跟踪您的学习在不同时间段的发展情况。",
+      "empty_state": "此时间段还没有数据。",
+      "periods": {
+        "daily": "每日",
+        "weekly": "每周",
+        "monthly": "每月",
+        "yearly": "每年",
+        "total": "总计"
+      },
+      "table": {
+        "word": "单词",
+        "count": "次数"
+      }
     }
   },
   "settings": {
-    "title": "设置",
     "tabs": {
-      "general": "通用",
-      "dictionary": "词典",
-      "llm": "AI",
+      "appearance": "外观",
+      "language": "语言",
+      "llm": "大语言模型",
       "audio": "音频",
       "anki": "Anki",
-      "about": "关于"
-    },
-    "general": {
-      "title": "通用",
-      "language": "界面语言",
-      "theme": {
-        "title": "主题",
-        "light": "浅色",
-        "dark": "深色",
-        "system": "跟随系统"
-      },
-      "accent": "强调色"
-    },
-    "dictionary": {
-      "title": "词典设置",
-      "cache_path": "缓存路径",
-      "browse": "浏览…",
-      "auto_detect": "自动检测",
-      "import": "导入词典…",
-      "rebuild": "重建索引",
-      "entries": "词条数",
-      "pairs": "语言对",
-      "last_updated": "最后更新"
-    },
-    "llm": {
-      "title": "AI 设置",
-      "provider": "AI 提供商",
-      "base_url": "API 端点",
-      "api_key": "API 密钥",
-      "model": "模型名称",
-      "local": {
-        "title": "本地模型",
-        "enable": "启用本地模型",
-        "path": "模型路径",
-        "url": "服务地址"
-      },
-      "template": "提示词模板",
+      "dictionary": "词典",
+      "keyboard": "键盘",
+      "about": "关于",
+      "prompts": "提示词",
       "glossary": "术语表"
     },
+    "appearance": {
+      "title": "主题",
+      "description": "选择整体外观和高亮颜色。",
+      "mode": {
+        "label": "模式",
+        "light": "浅色",
+        "system": "跟随系统",
+        "dark": "深色"
+      },
+      "accent": {
+        "label": "强调色",
+        "blue": "蓝色",
+        "purple": "紫色",
+        "green": "绿色",
+        "orange": "橙色",
+        "rose": "玫瑰红"
+      },
+      "desktop": {
+        "title": "桌面集成",
+        "description": "控制托盘图标、Dock 图标以及应用是否随系统启动。",
+        "tray_label": "显示托盘图标",
+        "startup_label": "开机后自动启动 AIctionary",
+        "dock_label": "显示 Dock / 任务栏图标"
+      }
+    },
+    "language": {
+      "title": "语言",
+      "description": "选择您的首选语言。",
+      "label": "显示语言",
+      "options": {
+        "en": "English",
+        "zh": "简体中文"
+      }
+    },
+    "llm": {
+      "title": "提供商连接",
+      "description": "配置您的大语言模型端点的基础 URL 和身份验证。",
+      "models": {
+        "load": "加载模型列表",
+        "loading": "正在加载模型…",
+        "helper": "填写基础 URL 和 API 密钥后，从提供商加载可用模型。",
+        "empty": "提供商未返回模型，请检查设置。",
+        "missing_credentials": "请输入 API 密钥后再加载模型。"
+      },
+      "base_url": {
+        "label": "基础 URL",
+        "placeholder": "https://api.example.com"
+      },
+      "api_key": {
+        "label": "API 密钥",
+        "placeholder": "sk-..."
+      },
+      "model": {
+        "label": "模型",
+        "placeholder": "选择模型",
+        "custom": "自定义：{{model}}"
+      },
+      "test_connection": "测试连接",
+      "testing": "测试中…",
+      "tips": {
+        "title": "使用提示",
+        "description": "这些设置控制如何使用 AI 进行语义解释和比较。",
+        "tip1": "确保基础 URL 指向可从您的设备访问的网关。",
+        "tip2": "API 密钥仅存储在本地。定期轮换以确保安全。",
+        "tip3": "选择一个平衡准确性和延迟的模型以适应您的工作流程。"
+      },
+      "toast": {
+        "success": "提供商设置看起来不错！",
+        "error": "无法连接到提供商。请仔细检查基础 URL 和 API 密钥。",
+        "models_success": "已加载 {{count}} 个模型。",
+        "models_error": "无法获取模型列表，请检查凭据。"
+      }
+    },
     "audio": {
-      "title": "音频设置",
-      "tts": {
-        "title": "TTS",
-        "provider": "提供商",
-        "voice": "声音",
-        "speed": "语速"
+      "title": "音频流",
+      "description": "配置 Fish Audio 凭证，用于播放单词发音。",
+      "api_key": {
+        "label": "API Key",
+        "placeholder": "fish_...",
+        "helper": "仅存储在本地，请在 Fish Audio 控制台生成。"
+      },
+      "model": {
+        "label": "TTS 模型",
+        "placeholder": "选择模型",
+        "helper": "S1 音质最佳，旧版模型适合兼容或轻量场景。",
+        "options": {
+          "s1": "S1（最新，高品质）",
+          "speech16": "Speech 1.6（旧版，稳定）",
+          "speech15": "Speech 1.5（轻量）"
+        }
+      },
+      "voice": {
+        "label": "Reference ID",
+        "placeholder": "输入 Fish Audio Reference ID（可选）",
+        "helper": "留空则使用默认语音。"
       }
     },
     "anki": {
-      "title": "Anki 设置",
-      "connect": "连接",
-      "deck": "牌组",
-      "note_type": "笔记类型",
-      "fields": "字段映射",
-      "preview": "预览"
+      "title": "AnkiConnect",
+      "description": "通过 AnkiConnect 插件把精心整理的卡片直接同步到牌组。",
+      "api_url": {
+        "label": "API 地址",
+        "placeholder": "http://127.0.0.1:8765",
+        "helper": "默认地址为 http://127.0.0.1:8765，如有自定义端口请在此修改。"
+      },
+      "deck": {
+        "label": "牌组名称",
+        "placeholder": "AIctionary",
+        "helper": "卡片会保存到该牌组，可填写已有或新建的牌组名称。"
+      },
+      "card_theme": {
+        "label": "卡片主题",
+        "placeholder": "选择卡片主题",
+        "helper": "决定导入 Anki 后卡片显示为浅色还是深色。",
+        "options": {
+          "light": "浅色",
+          "dark": "深色"
+        }
+      }
+    },
+    "dictionary": {
+      "cache": {
+        "title": "缓存管理",
+        "label": "缓存目录",
+        "button_browse": "浏览文件夹",
+        "button_check": "检查缓存完整性",
+        "button_checking": "检查中…",
+        "button_redownload": "重新下载缓存",
+        "button_show": "在访达中显示",
+        "button_clear": "清除路径",
+        "last_updated": "最后更新：",
+        "never": "从未"
+      },
+      "why": {
+        "title": "为什么需要缓存？",
+        "items": [
+          "词典数据存储在本地以实现快速查找，无需互联网连接。",
+          "仅在缓存损坏或过时时重新下载。"
+        ]
+      },
+      "incomplete": {
+        "title": "词典缓存可能不完整",
+        "description": "本地词典缓存仅包含 {{count}} 条记录，完整缓存应至少包含 {{required}} 条。是否现在重新下载缓存？",
+        "confirm": "重新下载缓存",
+        "cancel": "暂不"
+      },
+      "toast": {
+        "browse_error": "浏览文件夹失败。",
+        "check_complete": "词典缓存看起来是完整的（{{count}} 条记录）。",
+        "check_incomplete": "词典缓存可能不完整（{{count}} 条记录，预期应多于 {{required}} 条）。",
+        "check_error": "检查缓存完整性失败。",
+        "redownload_success": "缓存重新下载成功！",
+        "redownload_error": "重新下载缓存失败。",
+        "show_error": "打开目录失败。",
+        "clear_success": "缓存路径已清除。"
+      }
+    },
+    "keyboard": {
+      "shortcuts": {
+        "title": "快捷键",
+        "description": "配置全局快捷键，便于快速复制选中文本或打开新查询。",
+        "enable_label": "启用全局快捷键",
+        "enable_helper": "关闭后，按下快捷键不会触发操作，重新开启即可恢复。",
+        "quick_query": "快速查询",
+        "new_query": "新查询",
+        "reset": "重置为默认"
+      },
+      "usage": {
+        "title": "用法",
+        "items": [
+          "快速查询：从应用程序的任何位置聚焦搜索输入。",
+          "新查询：清除搜索并重新开始。"
+        ]
+      },
+      "toast": {
+        "reset": "键盘快捷键已恢复。"
+      }
+    },
+    "prompts": {
+      "title": "提示词模板",
+      "description": "自定义用于 LLM 翻译和定义生成的系统提示词。",
+      "translation_label": "翻译提示词",
+      "translation_helper": "使用 {source_text} 表示输入文本，{target_lang} 表示目标语言。",
+      "definition_label": "定义提示词",
+      "definition_helper": "通过 LLM 生成单词定义时使用的系统提示词。",
+      "reset": "重置",
+      "reset_success": "提示词模板已重置。"
+    },
+    "glossary": {
+      "title": "专业术语表",
+      "description": "定义特定领域的术语，确保翻译一致性。",
+      "helper": "在此定义的术语将作为上下文注入 LLM 翻译请求。",
+      "source": "源术语",
+      "target": "目标翻译",
+      "notes": "备注",
+      "notes_placeholder": "例如：医学、法律等",
+      "add": "添加术语",
+      "reset_success": "术语表已重置。"
     },
     "about": {
-      "title": "关于",
-      "version": "版本",
-      "build": "构建",
-      "github": "GitHub",
-      "license": "许可证"
+      "info": {
+        "title": "应用信息",
+        "table": {
+          "name": "名称",
+          "version": "版本",
+          "build": "构建",
+          "environment": "环境"
+        }
+      },
+      "resources": {
+        "title": "资源",
+        "tauri": "Tauri 文档",
+        "shadcn": "shadcn/ui",
+        "open_dictionary": "开放词典"
+      }
     }
   },
   "common": {
     "theme_toggle": "切换主题"
   },
   "download": {
-    "title": "下载词典数据",
-    "description": "首次使用需要下载词典数据。",
-    "source": "词典来源",
-    "status": "状态",
-    "progress": "进度",
-    "start": "开始下载",
-    "cancel": "取消",
-    "retry": "重试",
-    "complete": "完成",
-    "error": "下载失败"
+    "dialog": {
+      "title": "下载中",
+      "downloading": "正在下载文件...",
+      "extracting": "正在解压文件...",
+      "retry": "重试中 ({{attempt}}/{{maxRetries}})",
+      "progress": "{{downloaded}} / {{total}} ({{percentage}}%)",
+      "complete": "下载完成！",
+      "error": "下载失败",
+      "close": "关闭",
+      "cancel": "取消",
+      "dict_type_label": "词典类型",
+      "dict_type_en_zh": "英汉 (English ↔ Chinese)",
+      "dict_type_zh_en": "汉英 (Chinese → English)"
+    }
   }
 }

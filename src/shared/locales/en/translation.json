@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "AI Dictionary",
+    "name": "AIctionary",
     "loading": "Loading…"
   },
   "nav": {
@@ -10,9 +10,9 @@
   },
   "error": {
     "page_not_found": {
-      "title": "Page Not Found",
-      "description": "The page you are looking for does not exist.",
-      "action": "Go home"
+      "title": "Page not found",
+      "description": "We could not find the page you were looking for.",
+      "go_home": "Go back home"
     }
   },
   "main": {
@@ -22,21 +22,10 @@
       "searching": "Searching…",
       "button": "Search",
       "empty_error": "Please enter a word to search.",
-      "smart_input": {
-        "placeholder": "Dictionary lookup or LLM translation",
-        "mode_word": "Word lookup mode",
-        "mode_translate": "Long text translation mode",
-        "hint_word": "↵ Search",
-        "hint_suggestion": "↵/↓ Select suggestion",
-        "hint_translate": "↵ Newline | ⌘/Ctrl ↵ Translate",
-        "clear": "Clear input",
-        "translate": "Translate",
-        "translate_title": "Ctrl + Enter to translate"
-      },
       "dict_type": {
         "auto": "Auto",
-        "en_zh": "EN-ZH",
-        "zh_en": "ZH-EN"
+        "en_zh": "英汉",
+        "zh_en": "汉英"
       },
       "suggestion": {
         "prefix": "Words starting with \"{{query}}\":",
@@ -45,150 +34,368 @@
         "view_lemma": "View {{lemma}}",
         "distance_one": "edit distance 1",
         "distance": "edit distance {{n}}"
+      },
+      "smart_input": {
+        "placeholder": "Dictionary lookup or LLM translation",
+        "mode_translate": "Long text translation mode",
+        "mode_word": "Word lookup mode",
+        "hint_word": "↵ Lookup",
+        "hint_suggestion": "↵/↓ Select suggestion",
+        "hint_translate": "↵ Newline | ⌘/Ctrl ↵ Translate",
+        "clear": "Clear content",
+        "translate": "Translate",
+        "translate_title": "Ctrl + Enter to translate"
       }
     },
     "history": {
       "title": "Recent queries"
     },
     "quick_actions": {
-      "title": "Quick actions",
-      "random_word": "Random word",
-      "export": "Export",
-      "clear_history": "Clear history"
+      "statistics": {
+        "title": "Open statistics",
+        "description": "Review learned words and export your study log."
+      },
+      "settings": {
+        "title": "Configure settings",
+        "description": "Adjust appearance, providers, and keyboard shortcuts."
+      },
+      "button": "Go"
     },
     "comparison": {
-      "title": "Compare definitions"
-    },
-    "definitions": {
-      "title": "Definitions",
-      "no_definitions": "No definitions found"
+      "title": "Compare with",
+      "description": "Understand nuances between related words."
     },
     "llm": {
+      "missing_config": "The word isn't cached locally and no AI provider is configured yet.",
+      "missing_cache_path": "Set a dictionary cache path before asking the AI to help.",
       "not_found_word": "Word not found in dictionary. Try a phrase or sentence for AI translation.",
-      "missing_cache_path": "Please configure a dictionary cache path in settings first.",
-      "missing_config": "Please configure your LLM API key in settings first.",
-      "error": "AI translation failed. Please try again later."
+      "generating": "Generating a definition via {{model}}…",
+      "generating_status": "Generating translation via {{model}}…",
+      "success": "Translation complete using {{model}}.",
+      "error": "The AI provider couldn't produce a translation. Please try again later.",
+      "cache_error": "Translation shown, but writing to the cache failed."
     },
     "errors": {
-      "dictionary": "Unable to query dictionary. Please try again later."
+      "dictionary": "Unable to query the dictionary. Please try again later."
     },
     "word_summary": {
-      "title": "Word summary",
-      "pronunciation": "Pronunciation",
-      "forms": "Forms",
-      "source": "Source"
+      "word_forms": "Word forms",
+      "third_person": "3rd person singular",
+      "past_tense": "Past tense",
+      "past_participle": "Past participle",
+      "present_participle": "Present participle",
+      "comparative": "Comparative",
+      "superlative": "Superlative",
+      "plural": "Plural",
+      "singular": "Singular",
+      "play_pronunciation": "Play pronunciation",
+      "stop_pronunciation": "Stop pronunciation",
+      "audio_error": "Couldn't play the pronunciation. Please try again.",
+      "audio_not_configured": "Configure an API key in Settings → Audio to play this pronunciation.",
+      "add_to_anki": "Save to Anki",
+      "anki_success": "Card saved to Anki.",
+      "anki_error": "Couldn't add this word to Anki. Please try again.",
+      "anki_not_configured": "Set your AnkiConnect address and deck in Settings → Anki first."
     }
   },
   "statistics": {
     "title": "Statistics",
-    "description": "View your dictionary usage and export learning materials.",
+    "description": "Review your dictionary usage and export study materials.",
     "export": {
-      "title": "Export",
-      "csv": "Export as CSV",
-      "json": "Export as JSON",
-      "anki": "Import to Anki",
-      "anki_note": "Export your query history as Anki cards."
+      "learned_words": "Export learned words",
+      "query_counts": "Export query counts"
     },
     "overview": {
-      "title": "Overview",
-      "total_queries": "Total queries",
-      "unique_words": "Unique words",
-      "avg_per_day": "Avg per day"
+      "learned_words": {
+        "title": "Learned words",
+        "hint_none": "No learned words yet. Start querying to track!",
+        "hint_one": "One word learned so far. Keep exploring!",
+        "hint_few": "{{count}} words learned. You're building momentum!",
+        "hint_many": "{{count}} words learned. Great progress!",
+        "hint_lots": "{{count}} words learned. Impressive vocabulary!"
+      },
+      "total_queries": {
+        "title": "Total queries",
+        "queried_times": "Queried {{count}} times."
+      },
+      "most_frequent": {
+        "title": "Most frequent"
+      }
     },
     "top_words": {
-      "title": "Top words"
+      "title": "Top words",
+      "description": "Words with the highest frequency across all time.",
+      "empty_state": "Search a word to start tracking statistics.",
+      "table": {
+        "word": "Word",
+        "times_queried": "Times queried",
+        "last_queried": "Last queried"
+      }
     },
     "metrics": {
-      "title": "Metrics",
-      "retention": "Retention rate",
-      "streak": "Day streak"
+      "title": "Time-based trends",
+      "description": "Track how your learning evolves across different timeframes.",
+      "empty_state": "No data yet for this period.",
+      "periods": {
+        "daily": "Daily",
+        "weekly": "Weekly",
+        "monthly": "Monthly",
+        "yearly": "Yearly",
+        "total": "Total"
+      },
+      "table": {
+        "word": "Word",
+        "count": "Count"
+      }
     }
   },
   "settings": {
-    "title": "Settings",
     "tabs": {
-      "general": "General",
-      "dictionary": "Dictionary",
-      "llm": "AI",
+      "appearance": "Appearance",
+      "language": "Language",
+      "llm": "LLM Providers",
       "audio": "Audio",
       "anki": "Anki",
-      "about": "About"
-    },
-    "general": {
-      "title": "General",
-      "language": "Interface language",
-      "theme": {
-        "title": "Theme",
-        "light": "Light",
-        "dark": "Dark",
-        "system": "System"
-      },
-      "accent": "Accent color"
-    },
-    "dictionary": {
-      "title": "Dictionary settings",
-      "cache_path": "Cache path",
-      "browse": "Browse…",
-      "auto_detect": "Auto-detect",
-      "import": "Import dictionary…",
-      "rebuild": "Rebuild index",
-      "entries": "Entries",
-      "pairs": "Language pairs",
-      "last_updated": "Last updated"
-    },
-    "llm": {
-      "title": "AI settings",
-      "provider": "AI provider",
-      "base_url": "API endpoint",
-      "api_key": "API key",
-      "model": "Model name",
-      "local": {
-        "title": "Local model",
-        "enable": "Enable local model",
-        "path": "Model path",
-        "url": "Service URL"
-      },
-      "template": "Prompt template",
+      "dictionary": "Dictionary",
+      "keyboard": "Keyboard",
+      "about": "About",
+      "prompts": "Prompts",
       "glossary": "Glossary"
     },
+    "appearance": {
+      "title": "Theme",
+      "description": "Choose the overall appearance and highlight color.",
+      "mode": {
+        "label": "Mode",
+        "light": "Light",
+        "system": "System",
+        "dark": "Dark"
+      },
+      "accent": {
+        "label": "Accent Color",
+        "blue": "Blue",
+        "purple": "Purple",
+        "green": "Green",
+        "orange": "Orange",
+        "rose": "Rose"
+      },
+      "desktop": {
+        "title": "Desktop integration",
+        "description": "Control the tray icon, dock icon, and whether AIctionary starts automatically.",
+        "tray_label": "Show tray icon",
+        "startup_label": "Start AIictionary at login",
+        "dock_label": "Show dock/taskbar icon"
+      }
+    },
+    "language": {
+      "title": "Language",
+      "description": "Select your preferred language.",
+      "label": "Display Language",
+      "options": {
+        "en": "English",
+        "zh": "简体中文"
+      }
+    },
+    "llm": {
+      "title": "Provider connection",
+      "description": "Configure the base URL and authentication for your LLM endpoint.",
+      "models": {
+        "load": "Load models",
+        "loading": "Loading models…",
+        "helper": "Load models from the configured endpoint after entering the base URL and API key.",
+        "empty": "No models were returned. Double-check the provider settings.",
+        "missing_credentials": "Enter the API key before loading models."
+      },
+      "base_url": {
+        "label": "Base URL",
+        "placeholder": "https://api.example.com"
+      },
+      "api_key": {
+        "label": "API key",
+        "placeholder": "sk-..."
+      },
+      "model": {
+        "label": "Model",
+        "placeholder": "Select model",
+        "custom": "Custom: {{model}}"
+      },
+      "test_connection": "Test connection",
+      "testing": "Testing…",
+      "tips": {
+        "title": "Usage tips",
+        "description": "These settings control how AI is used for semantic explanations and comparisons.",
+        "tip1": "Keep the base URL pointed to a gateway that is accessible from your machine.",
+        "tip2": "The API key is stored locally only. Rotate it regularly for security.",
+        "tip3": "Pick a model that balances accuracy and latency for your workflow."
+      },
+      "toast": {
+        "success": "Provider settings look good!",
+        "error": "Failed to reach the provider. Double-check the base URL and API key.",
+        "models_success": "Loaded {{count}} model(s).",
+        "models_error": "Unable to load the models list. Check your credentials."
+      }
+    },
     "audio": {
-      "title": "Audio settings",
-      "tts": {
-        "title": "TTS",
-        "provider": "Provider",
-        "voice": "Voice",
-        "speed": "Speed"
+      "title": "Audio streaming",
+      "description": "Configure Fish Audio credentials for pronunciation playback.",
+      "api_key": {
+        "label": "API key",
+        "placeholder": "fish_...",
+        "helper": "Stored securely on this device only. Generate keys in your Fish Audio dashboard."
+      },
+      "model": {
+        "label": "TTS model",
+        "placeholder": "Select model",
+        "helper": "S1 offers the most natural speech. Legacy models remain available for compatibility.",
+        "options": {
+          "s1": "S1 (latest, high quality)",
+          "speech16": "Speech 1.6 (legacy, stable)",
+          "speech15": "Speech 1.5 (lightweight)"
+        }
+      },
+      "voice": {
+        "label": "Reference ID",
+        "placeholder": "Enter a Fish Audio reference ID (optional)",
+        "helper": "Leave empty to use the default system voice."
       }
     },
     "anki": {
-      "title": "Anki settings",
-      "connect": "Connect",
-      "deck": "Deck",
-      "note_type": "Note type",
-      "fields": "Field mapping",
-      "preview": "Preview"
+      "title": "AnkiConnect",
+      "description": "Send curated cards directly to your deck via the AnkiConnect plugin.",
+      "api_url": {
+        "label": "API address",
+        "placeholder": "http://127.0.0.1:8765",
+        "helper": "Default AnkiConnect endpoint. Change it only if you use a custom address."
+      },
+      "deck": {
+        "label": "Deck name",
+        "placeholder": "AIctionary",
+        "helper": "Cards are saved into this deck. You can pick any existing or new deck."
+      },
+      "card_theme": {
+        "label": "Card theme",
+        "placeholder": "Select card theme",
+        "helper": "Choose whether cards render with a light or dark canvas.",
+        "options": {
+          "light": "Light",
+          "dark": "Dark"
+        }
+      }
+    },
+    "dictionary": {
+      "cache": {
+        "title": "Cache management",
+        "label": "Cache directory",
+        "button_browse": "Browse folder",
+        "button_check": "Check cache completeness",
+        "button_checking": "Checking…",
+        "button_redownload": "Re-download cache",
+        "button_show": "Show in Finder",
+        "button_clear": "Clear path",
+        "last_updated": "Last updated:",
+        "never": "Never"
+      },
+      "why": {
+        "title": "Why cache?",
+        "items": [
+          "The dictionary data is stored locally to enable fast lookups without internet access.",
+          "Re-download only if the cache becomes corrupted or outdated."
+        ]
+      },
+      "incomplete": {
+        "title": "Dictionary cache may be incomplete",
+        "description": "The local dictionary cache contains only {{count}} entries. A full cache should have at least {{required}} entries. Do you want to re-download the cache now?",
+        "confirm": "Re-download cache",
+        "cancel": "Not now"
+      },
+      "toast": {
+        "browse_error": "Failed to browse folder.",
+        "check_complete": "Dictionary cache looks complete ({{count}} entries).",
+        "check_incomplete": "Dictionary cache may be incomplete ({{count}} entries, expected more than {{required}}).",
+        "check_error": "Failed to check cache completeness.",
+        "redownload_success": "Cache re-downloaded successfully!",
+        "redownload_error": "Failed to re-download cache.",
+        "show_error": "Failed to open directory.",
+        "clear_success": "Cache path cleared."
+      }
+    },
+    "keyboard": {
+      "shortcuts": {
+        "title": "Shortcuts",
+        "description": "Configure global hotkeys for copying selections or opening a fresh query.",
+        "enable_label": "Enable global shortcuts",
+        "enable_helper": "When disabled, keyboard shortcuts are ignored until you turn them back on.",
+        "quick_query": "Quick query",
+        "new_query": "New query",
+        "reset": "Reset to defaults"
+      },
+      "usage": {
+        "title": "Usage",
+        "items": [
+          "Quick query: Focus the search input from anywhere in the app.",
+          "New query: Clear the search and start fresh."
+        ]
+      },
+      "toast": {
+        "reset": "Keyboard shortcuts restored."
+      }
+    },
+    "prompts": {
+      "title": "Prompt Templates",
+      "description": "Customize the system prompts used for LLM-powered translation and definition generation.",
+      "translation_label": "Translation Prompt",
+      "translation_helper": "Use {source_text} for the input text and {target_lang} for the target language.",
+      "definition_label": "Definition Prompt",
+      "definition_helper": "The system prompt used when generating word definitions via LLM.",
+      "reset": "Reset",
+      "reset_success": "Prompt template reset."
+    },
+    "glossary": {
+      "title": "Terminology Glossary",
+      "description": "Define domain-specific terms to ensure consistent translations.",
+      "helper": "Terms defined here are injected as context into LLM translation requests.",
+      "source": "Source Term",
+      "target": "Target Translation",
+      "notes": "Notes",
+      "notes_placeholder": "e.g. Medical, Legal, etc.",
+      "add": "Add term",
+      "reset_success": "Glossary reset."
     },
     "about": {
-      "title": "About",
-      "version": "Version",
-      "build": "Build",
-      "github": "GitHub",
-      "license": "License"
+      "info": {
+        "title": "Application info",
+        "table": {
+          "name": "Name",
+          "version": "Version",
+          "build": "Build",
+          "environment": "Environment"
+        }
+      },
+      "resources": {
+        "title": "Resources",
+        "tauri": "Tauri documentation",
+        "shadcn": "shadcn/ui",
+        "open_dictionary": "Open Dictionary"
+      }
     }
   },
   "common": {
     "theme_toggle": "Toggle theme"
   },
   "download": {
-    "title": "Download dictionary data",
-    "description": "You need to download dictionary data before first use.",
-    "source": "Dictionary source",
-    "status": "Status",
-    "progress": "Progress",
-    "start": "Start download",
-    "cancel": "Cancel",
-    "retry": "Retry",
-    "complete": "Complete",
-    "error": "Download failed"
+    "dialog": {
+      "title": "Downloading",
+      "downloading": "Downloading file...",
+      "extracting": "Extracting files...",
+      "retry": "Retrying ({{attempt}}/{{maxRetries}})",
+      "progress": "{{downloaded}} / {{total}} ({{percentage}}%)",
+      "complete": "Download complete!",
+      "error": "Download failed",
+      "close": "Close",
+      "cancel": "Cancel",
+      "dict_type_label": "Dictionary type",
+      "dict_type_en_zh": "英汉 (English ↔ Chinese)",
+      "dict_type_zh_en": "汉英 (Chinese → English)"
+    }
   }
 }
