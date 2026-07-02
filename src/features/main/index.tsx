@@ -67,14 +67,19 @@ function SuggestionPanel({
     return (
       <div className="bg-muted/50 border-border w-full max-w-2xl rounded-lg border p-3 text-sm">
         <span className="text-muted-foreground">
-          {t("main.search.suggestion.lemma", { query, lemma: suggestion.lemma })}
+          {t("main.search.suggestion.lemma", {
+            query,
+            lemma: suggestion.lemma,
+          })}
         </span>
         <div className="mt-1.5">
           <button
             onClick={() => onSelect(suggestion.lemma)}
             className="bg-background hover:bg-accent cursor-pointer rounded border px-2.5 py-0.5 text-sm transition-colors"
           >
-            {t("main.search.suggestion.view_lemma", { lemma: suggestion.lemma })}
+            {t("main.search.suggestion.view_lemma", {
+              lemma: suggestion.lemma,
+            })}
           </button>
         </div>
       </div>
@@ -84,7 +89,11 @@ function SuggestionPanel({
   return null;
 }
 
-function TranslationDisplay({ translation }: { translation: TranslationResult }) {
+function TranslationDisplay({
+  translation,
+}: {
+  translation: TranslationResult;
+}) {
   return (
     <div className="bg-card border-border mx-auto w-full max-w-2xl rounded-lg border p-4">
       <p className="text-muted-foreground text-xs whitespace-pre-wrap break-words">
@@ -110,19 +119,11 @@ export function MainPage() {
   } = useDictionarySearch();
 
   useEffect(() => {
-    const handleFocusSearch = () => {
-      const el = document.querySelector<HTMLTextAreaElement>("textarea");
-      el?.focus();
-    };
-
-    window.addEventListener("focus-search-input", handleFocusSearch);
-    return () => {
-      window.removeEventListener("focus-search-input", handleFocusSearch);
-    };
+    // focus-search-input is now handled directly via SmartDictInputRef in AppLayout
   }, []);
 
   return (
-    <div className="flex flex-1 flex-col gap-8">
+    <div className="flex flex-1 flex-col">
       <div className="flex flex-col items-center gap-4">
         {suggestion && !isGeneratingFromLlm && (
           <SuggestionPanel
@@ -131,11 +132,14 @@ export function MainPage() {
             onSelect={search}
           />
         )}
-        {!result && !suggestion && !isGeneratingFromLlm && !translationResult && (
-          <p className="text-muted-foreground text-sm">
-            {t("main.empty_state")}
-          </p>
-        )}
+        {!result &&
+          !suggestion &&
+          !isGeneratingFromLlm &&
+          !translationResult && (
+            <p className="text-muted-foreground text-sm">
+              {t("main.empty_state")}
+            </p>
+          )}
       </div>
 
       {isGeneratingFromLlm && (

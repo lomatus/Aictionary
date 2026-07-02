@@ -5,16 +5,18 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
-
+    "core:window:allow-start-dragging",
     "core:app:allow-set-dock-visibility",
     "core:window:allow-set-skip-taskbar",
-
+    "core:window:allow-close",
+    "core:window:allow-minimize",
+    "core:window:allow-maximize",
+    "core:window:allow-unmaximize",
+    "core:window:allow-is-maximized",
     "dialog:allow-open",
     "dialog:allow-save",
-
     "opener:allow-open-path",
     "opener:allow-reveal-item-in-dir",
-
     "autostart:default"
   ]
 }
