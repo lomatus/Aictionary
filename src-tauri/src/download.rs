@@ -274,3 +274,134 @@ pub async fn extract_zip(app: AppHandle, args: ExtractZipArgs) -> Result<String,
 
     Ok(extract_to.to_string_lossy().into())
 }
+
+
+// === llama.cpp download and server management ===
+use std::sync::{Arc, Mutex};
+use std::process::Child;
+use std::sync::LazyLock;
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DownloadAndExtractArgs {
+    pub url: String,
+    pub dest_dir: String,
+}
+
+#[tauri::command]
+pub async fn download_and_extract(
+    app: AppHandle,
+    args: DownloadAndExtractArgs,
+) -> Result<String, String> {
+    use futures_util::StreamExt;
+
+    if args.url.trim().is_empty() {
+        return Err("URL is required".into());
+    }
+    if args.dest_dir.trim().is_empty() {
+        return Err("Destination directory is required".into());
+    }
+
+    let dest_dir = PathBuf::from(&args.dest_dir);
+    fs::create_dir_all(&dest_dir).map_err(|e| format!("Failed to create directory: {}", e))?;
+
+    // Download zip to temp file
+    let temp_zip = dest_dir.join("temp_download.zip");
+    let response = reqwest::Client::new()
+        .get(&args.url)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to send request: {}", e))?;
+
+    let total_size = response.content_length().unwrap_or(0);
+    let mut file = File::create(&temp_zip).map_err(|e| format!("Failed to create temp file: {}", e))?;
+
+    let mut stream = response.bytes_stream();
+    let mut downloaded: u64 = 0;
+
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk.map_err(|e| format!("Download error: {}", e))?;
+        file.write_all(&chunk).map_err(|e| format!("Write error: {}", e))?;
+        downloaded += chunk.len() as u64;
+        let percentage = if total_size > 0 {
+            (downloaded as f64 / total_size as f64) * 100.0
+        } else {
+            0.0
+        };
+        app.emit("download-progress", serde_json::json!({
+            "downloaded": downloaded,
+            "total": total_size,
+            "percentage": percentage
+        })).ok();
+    }
+
+    drop(file);
+
+    // Extract zip
+    let file = File::open(&temp_zip).map_err(|e| format!("Failed to open zip: {}", e))?;
+    let mut archive = zip::ZipArchive::new(file).map_err(|e| format!("Invalid zip: {}", e))?;
+
+    for i in 0..archive.len() {
+        let mut archive_file = archive.by_index(i).map_err(|e| format!("Zip error: {}", e))?;
+        let outpath = dest_dir.join(archive_file.name());
+
+        if archive_file.is_dir() {
+            fs::create_dir_all(&outpath).map_err(|e| format!("Failed to create dir: {}", e))?;
+        } else {
+            if let Some(parent) = outpath.parent() {
+                fs::create_dir_all(parent).map_err(|e| format!("Failed to create parent: {}", e))?;
+            }
+            let mut outfile = File::create(&outpath).map_err(|e| format!("Failed to create file: {}", e))?;
+            io::copy(&mut archive_file, &mut outfile).map_err(|e| format!("Failed to extract: {}", e))?;
+        }
+    }
+
+    // Cleanup temp zip
+    let _ = fs::remove_file(&temp_zip);
+
+    Ok(dest_dir.to_string_lossy().into())
+}
+
+static LLAMA_SERVER: LazyLock<Arc<Mutex<Option<Child>>>> = LazyLock::new(|| Arc::new(Mutex::new(None)));
+
+#[tauri::command]
+pub fn spawn_llama_server(
+    binary_path: String,
+    model_path: String,
+    n_ctx: u32,
+    n_gpu: u32,
+    port: u16,
+) -> Result<(), String> {
+    use std::process::Command;
+
+    // Stop existing server if running
+    let mut server = LLAMA_SERVER.lock().map_err(|e| format!("Lock error: {}", e))?;
+    if server.is_some() {
+        drop(server);
+        stop_llama_server()?;
+        server = LLAMA_SERVER.lock().map_err(|e| format!("Lock error: {}", e))?;
+    }
+
+    let child = Command::new(&binary_path)
+        .args([
+            "-m", &model_path,
+            "-c", &n_ctx.to_string(),
+            "--gpu-layers", &n_gpu.to_string(),
+            "-p", &port.to_string(),
+            "--host", "127.0.0.1",
+        ])
+        .spawn()
+        .map_err(|e| format!("Failed to spawn llama-server: {}", e))?;
+
+    *server = Some(child);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn stop_llama_server() -> Result<(), String> {
+    let mut server = LLAMA_SERVER.lock().map_err(|e| format!("Lock error: {}", e))?;
+    if let Some(mut child) = server.take() {
+        child.kill().map_err(|e| format!("Failed to kill process: {}", e))?;
+    }
+    Ok(())
+}

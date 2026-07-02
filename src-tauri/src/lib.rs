@@ -89,6 +89,9 @@ pub fn run() {
             // Download commands
             download::download_file,
             download::extract_zip,
+            download::download_and_extract,
+            download::spawn_llama_server,
+            download::stop_llama_server,
             // Audio cache commands
             audio_cache::resolve_audio_cache_entry,
             audio_cache::read_audio_cache_file,

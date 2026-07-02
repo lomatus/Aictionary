@@ -13,6 +13,7 @@ pub fn dictionary_query(word: String, dict_type: Option<String>) -> Result<Query
     }
 
     let pair_id = dict_type.unwrap_or_else(|| "en_zh".to_string());
+    eprintln!("[dictionary_query] word={:?}, pair_id={:?}", word, pair_id);
 
     let conn = db().lock();
     query_word(&conn, word, &pair_id)

@@ -457,7 +457,7 @@ pub fn query_word(conn: &Connection, word: &str, pair_id: &str) -> SqlResult<Que
     let normalized = normalize(word);
     let pair = get_language_pair(conn, pair_id)?;
 
-    let Some(pair) = pair else {
+    let Some(pair) = pair else { eprintln!("[query_word] pair not found for pair_id={:?}", pair_id);
         return Ok(QueryResult { entry: None, suggestion: None });
     };
 
