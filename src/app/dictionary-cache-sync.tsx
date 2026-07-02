@@ -18,11 +18,13 @@ import {
 import { MIN_FULL_DICTIONARY_ENTRIES } from "@/shared/constants/dictionary";
 
 /**
- * Ensures the dictionary cache path is populated once when the app boots.
+ * Ensures the dictionary SQLite cache is populated once when the app boots.
  * Without this, lookups run before the user opens the settings page fall
  * back to the mock definition because the cache path stays empty.
  *
- * If no cache exists, automatically triggers download of the dictionary.
+ * The old JSON-file-based cache has been replaced by a SQLite database.
+ * After downloading and extracting the zip, we call import_dictionary_from_dir
+ * to populate the SQLite tables.
  */
 export function DictionaryCacheSync() {
   const { t } = useTranslation();
@@ -33,7 +35,6 @@ export function DictionaryCacheSync() {
   const [incompleteDialogOpen, setIncompleteDialogOpen] = useState(false);
   const [entryCount, setEntryCount] = useState<number | null>(null);
 
-  // Help verify that this component is actually mounting and running.
   useEffect(() => {
     console.log("[DictionaryCacheSync] Mounted with settings:", settings);
   }, [settings]);
@@ -71,50 +72,29 @@ export function DictionaryCacheSync() {
         setResolvedCachePath(cachePath);
         console.log("[DictionaryCacheSync] Using cache path:", cachePath);
 
-        // Check if cache actually has dictionary files at all.
+        // Check if SQLite cache actually has entries.
         const cacheExists = await invoke<boolean>("check_dictionary_cache_exists", {
           cachePath,
         });
-        console.log(
-          "[DictionaryCacheSync] Cache existence check:",
-          cachePath,
-          "exists?",
-          cacheExists
-        );
 
         if (!cancelled) {
           if (!cacheExists) {
-            // No cache or no JSON files found – treat as 0 entries and prompt user.
-            console.log(
-              "[DictionaryCacheSync] No dictionary entries found at cache path; treating as 0."
-            );
+            console.log("[DictionaryCacheSync] No dictionary entries in SQLite cache.");
             setEntryCount(0);
             setIncompleteDialogOpen(true);
             return;
           }
 
-          // Cache exists, check if it looks complete (enough entries).
+          // Cache exists, verify it looks complete.
           try {
             const count = await invoke<number>("count_dictionary_entries", {
               cachePath,
             });
-            console.log(
-              "[DictionaryCacheSync] Dictionary entry count at cache path:",
-              cachePath,
-              "=>",
-              count
-            );
+            console.log("[DictionaryCacheSync] Dictionary entry count:", count);
 
             if (count <= MIN_FULL_DICTIONARY_ENTRIES) {
-              console.log(
-                "[DictionaryCacheSync] Cache considered incomplete (<= ",
-                MIN_FULL_DICTIONARY_ENTRIES,
-                "entries)."
-              );
               setEntryCount(count);
               setIncompleteDialogOpen(true);
-            } else {
-              console.log("[DictionaryCacheSync] Cache considered complete.");
             }
           } catch (error) {
             console.warn("Failed to check dictionary entry count:", error);
@@ -132,9 +112,21 @@ export function DictionaryCacheSync() {
     };
   }, [settings.dictionary.cachePath, updateDictionary]);
 
-  const handleDownloadSuccess = () => {
+  const handleDownloadSuccess = async () => {
     const timestamp = new Date().toISOString();
     updateDictionary({ lastUpdated: timestamp });
+    // Re-check entry count after download/import
+    if (resolvedCachePath) {
+      try {
+        const count = await invoke<number>("count_dictionary_entries", {
+          cachePath: resolvedCachePath,
+        });
+        console.log("[DictionaryCacheSync] Entry count after import:", count);
+        setEntryCount(count);
+      } catch (error) {
+        console.warn("Failed to re-check entry count:", error);
+      }
+    }
   };
 
   const handleConfirmRedownload = async () => {
@@ -144,7 +136,7 @@ export function DictionaryCacheSync() {
 
     try {
       const release = await getLatestDictionaryRelease();
-      const normalizedPath = resolvedCachePath.replace(/[\/\\]+$/, "");
+      const normalizedPath = resolvedCachePath.replace(/[/\\]+$/, "");
       const lastSlashIndex = Math.max(
         normalizedPath.lastIndexOf("/"),
         normalizedPath.lastIndexOf("\\")
@@ -162,18 +154,27 @@ export function DictionaryCacheSync() {
         maxRetries: 3,
         extractAfterDownload: true,
         extractTo: parentDir,
-        onComplete: (result) => {
-          console.log("Dictionary re-downloaded:", result);
-        },
-        onExtractComplete: () => {
-          console.log("Dictionary re-extracted successfully");
+        onExtractComplete: async () => {
+          console.log("[DictionaryCacheSync] Extraction complete, importing into SQLite...");
+          // After extraction, import the JSON files into the SQLite database
+          const extractedDir = `${parentDir}/open-english-dictionary`;
+          try {
+            const imported = await invoke<number>("import_dictionary_from_dir", {
+              sourceDir: extractedDir,
+              dictType: "en_zh",
+            });
+            console.log("[DictionaryCacheSync] Imported", imported, "entries into SQLite.");
+            await handleDownloadSuccess();
+          } catch (error) {
+            console.error("[DictionaryCacheSync] Failed to import dictionary:", error);
+          }
         },
       };
 
       setDownloadOptions(options);
       setDownloadDialogOpen(true);
     } catch (error) {
-      console.warn("Failed to re-download dictionary cache:", error);
+      console.warn("Failed to initiate dictionary re-download:", error);
     }
   };
 
