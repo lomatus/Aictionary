@@ -2,7 +2,7 @@
 
 快速且异常好用的词典 App，基于 **Tauri 2 + React**，提供本地离线词库和可选大模型释义，专注于「查词体验」这件小事。
 
-<img width="800" height="600" alt="image" src="https://github.com/user-attachments/assets/47b0208f-7f4b-45c6-9215-446b53755500" />
+<img width="800" height="600" alt="image" src="public/screenshot.png" />
 
 
 ## 功能特性
@@ -26,6 +26,10 @@
   - 支持键盘快捷键快速打开 / 关闭、查询当前剪贴板内容等；
   - 查询记录自动缓存，可随时刷新词条以获取最新释义；
   - 主题、语言、LLM 提供商、快捷键等都可在设置里集中配置。
+
+- **本地AI翻译推理** 
+  - 支持本地 AI 模型推理，可在设置中配置使用
+  - 支持本地提示词及专业术语管理
 
 ---
 
@@ -77,7 +81,7 @@ AIctionary 支持通过 [Fish Audio](https://fish.audio/) 生成更自然的 TTS
    - **Reference ID（可选）**：若有自定义语音克隆，可填对应的 reference_id；留空则使用官方默认女声；
 3. 保存设置后，重新在单词卡片中点击喇叭按钮，会自动：
    - 先检查是否已有缓存音频；
-   - 若无缓存，则调用 Fish Audio 生成语音并写入 `~/Library/Application Support/com.ahpx.aictionary-re/audio/`（macOS，Windows/Linux 路径类似），下次播放直接走缓存。
+   - 若无缓存，则调用 Fish Audio 生成语音并写入 `%LOCALAPPDATA%\\aictionary\\dictionary.db\\audio\\`（macOS，Windows/Linux 路径类似），下次播放直接走缓存。
 
 > **注意**：Fish Audio API Key 会被写入设备本地的设置存储，不会上传到网络，请自行妥善保管与刷新密钥。
 

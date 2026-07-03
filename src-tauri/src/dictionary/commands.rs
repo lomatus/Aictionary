@@ -1,7 +1,10 @@
 use std::fs;
 use tauri::{AppHandle, Manager};
 
-use super::db::{db, query_word, bulk_import, count_entries, has_entries, list_enabled_pairs, upsert_entry, LanguagePair, QueryResult};
+use super::db::{
+    bulk_import, count_entries, db, has_entries, list_enabled_pairs, query_word, upsert_entry,
+    LanguagePair, QueryResult,
+};
 use super::types::{UpsertDictionaryEntryArgs, WordDefinition};
 use super::utils::resolve_cache_dir;
 
@@ -16,24 +19,28 @@ pub fn dictionary_query(word: String, dict_type: Option<String>) -> Result<Query
     eprintln!("[dictionary_query] word={:?}, pair_id={:?}", word, pair_id);
 
     let conn = db().lock();
-    query_word(&conn, word, &pair_id)
-        .map_err(|e| format!("Dictionary query failed: {}", e))
+    query_word(&conn, word, &pair_id).map_err(|e| format!("Dictionary query failed: {}", e))
 }
 
 #[tauri::command]
 pub fn upsert_dictionary_entry(args: UpsertDictionaryEntryArgs) -> Result<(), String> {
-    let UpsertDictionaryEntryArgs { entry, dict_type, .. } = args;
+    let UpsertDictionaryEntryArgs {
+        entry, dict_type, ..
+    } = args;
 
     let word = entry.word.trim().to_string();
     if word.is_empty() {
         return Err("Word is required".into());
     }
 
-    let pair_id = if dict_type.is_empty() { "en_zh" } else { &dict_type };
+    let pair_id = if dict_type.is_empty() {
+        "en_zh"
+    } else {
+        &dict_type
+    };
 
     let conn = db().lock();
-    upsert_entry(&conn, &entry, pair_id, "llm")
-        .map_err(|e| format!("Failed to save entry: {}", e))
+    upsert_entry(&conn, &entry, pair_id, "llm").map_err(|e| format!("Failed to save entry: {}", e))
 }
 
 #[tauri::command]
@@ -52,10 +59,12 @@ pub fn check_dictionary_cache_exists(_cache_path: String) -> Result<bool, String
 }
 
 #[tauri::command]
-pub fn count_dictionary_entries(_cache_path: String, dict_type: Option<String>) -> Result<u64, String> {
+pub fn count_dictionary_entries(
+    _cache_path: String,
+    dict_type: Option<String>,
+) -> Result<u64, String> {
     let conn = db().lock();
-    count_entries(&conn, dict_type.as_deref())
-        .map_err(|e| e.to_string())
+    count_entries(&conn, dict_type.as_deref()).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -108,7 +117,7 @@ pub fn is_sentence(text: String) -> bool {
 pub fn get_actual_db_path() -> Result<String, String> {
     let app_dir = dirs::data_local_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .join("aictionary-re");
+        .join("aictionary");
     let db_file = app_dir.join("dictionary.db");
     Ok(db_file.to_string_lossy().into_owned())
 }

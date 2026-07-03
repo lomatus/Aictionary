@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
 
 jobs:
@@ -129,7 +129,7 @@ jobs:
           cp "$ART" "$DEST"
 
           if [ "${{ matrix.os_name }}" == "windows" ]; then
-            BIN_PATH="src-tauri/target/release/aictionary-re.exe"
+            BIN_PATH="src-tauri/target/release/aictionary.exe"
             if [ -f "$BIN_PATH" ]; then
               ZIP_DEST="release/Aictionary-${GITHUB_REF_NAME}_windows_${{ matrix.arch }}_portable.zip"
               cp "$BIN_PATH" "Aictionary.exe"

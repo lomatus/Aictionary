@@ -28,7 +28,8 @@ export function DictionaryTab() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
-  const [downloadOptions, setDownloadOptions] = useState<DownloadOptions | null>(null);
+  const [downloadOptions, setDownloadOptions] =
+    useState<DownloadOptions | null>(null);
   const [downloadDictType, setDownloadDictType] = useState<DictType>("en-zh");
   const [dbPath, setDbPath] = useState<string>("");
 
@@ -42,7 +43,7 @@ export function DictionaryTab() {
   }, []);
 
   // Fallback if not loaded yet
-  const displayPath = dbPath || "%LOCALAPPDATA%\\aictionary-re\\dictionary.db";
+  const displayPath = dbPath || "%LOCALAPPDATA%\\aictionary\\dictionary.db";
   const handleCheckCompleteness = async () => {
     const cachePath = settings.dictionary.cachePath.trim();
     if (!cachePath) {
@@ -60,14 +61,14 @@ export function DictionaryTab() {
         toast.success(
           t("settings.dictionary.toast.check_complete", {
             count,
-          })
+          }),
         );
       } else {
         toast.warning(
           t("settings.dictionary.toast.check_incomplete", {
             count,
             required: MIN_FULL_DICTIONARY_ENTRIES,
-          })
+          }),
         );
       }
     } catch (error) {
@@ -96,7 +97,7 @@ export function DictionaryTab() {
       // Extract to parent directory since zip contains 'dictionary' folder
       const lastSlashIndex = Math.max(
         cachePath.lastIndexOf("/"),
-        cachePath.lastIndexOf("\\")
+        cachePath.lastIndexOf("\\"),
       );
       const parentDir =
         lastSlashIndex > 0 ? cachePath.substring(0, lastSlashIndex) : cachePath;
@@ -172,7 +173,7 @@ export function DictionaryTab() {
                       new Date(settings.dictionary.lastUpdated),
                       {
                         addSuffix: true,
-                      }
+                      },
                     )
                   : t("settings.dictionary.cache.never")}
               </span>

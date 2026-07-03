@@ -13,9 +13,8 @@ use super::types::{ComparisonEntry, DefinitionEntry, WordDefinition};
 // Global DB connection — wrapped in Mutex for thread safety
 // ---------------------------------------------------------------------------
 
-static DB: LazyLock<Mutex<Connection>> = LazyLock::new(|| {
-    Mutex::new(init_db().expect("failed to initialize dictionary database"))
-});
+static DB: LazyLock<Mutex<Connection>> =
+    LazyLock::new(|| Mutex::new(init_db().expect("failed to initialize dictionary database")));
 
 pub fn db() -> &'static Mutex<Connection> {
     &DB
@@ -28,7 +27,7 @@ pub fn db_path(app_data_dir: &PathBuf) -> PathBuf {
 fn init_db() -> SqlResult<Connection> {
     let app_dir = dirs::data_local_dir()
         .unwrap_or_else(|| PathBuf::from("."))
-        .join("aictionary-re");
+        .join("aictionary");
     std::fs::create_dir_all(&app_dir).ok();
     let db_file = app_dir.join("dictionary.db");
 
@@ -432,9 +431,15 @@ pub fn list_enabled_pairs(conn: &Connection) -> SqlResult<Vec<LanguagePair>> {
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type")]
 pub enum Suggestion {
-    Prefix { words: Vec<String> },
-    Spellcheck { candidates: Vec<SpellcheckCandidate> },
-    Lemma { lemma: String },
+    Prefix {
+        words: Vec<String>,
+    },
+    Spellcheck {
+        candidates: Vec<SpellcheckCandidate>,
+    },
+    Lemma {
+        lemma: String,
+    },
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -457,8 +462,12 @@ pub fn query_word(conn: &Connection, word: &str, pair_id: &str) -> SqlResult<Que
     let normalized = normalize(word);
     let pair = get_language_pair(conn, pair_id)?;
 
-    let Some(pair) = pair else { eprintln!("[query_word] pair not found for pair_id={:?}", pair_id);
-        return Ok(QueryResult { entry: None, suggestion: None });
+    let Some(pair) = pair else {
+        eprintln!("[query_word] pair not found for pair_id={:?}", pair_id);
+        return Ok(QueryResult {
+            entry: None,
+            suggestion: None,
+        });
     };
 
     let table = pair.entries_table();
@@ -469,13 +478,19 @@ pub fn query_word(conn: &Connection, word: &str, pair_id: &str) -> SqlResult<Que
             "INSERT INTO query_history (word, pair_id) VALUES (?1, ?2)",
             params![normalized, pair_id],
         );
-        return Ok(QueryResult { entry: Some(entry), suggestion: None });
+        return Ok(QueryResult {
+            entry: Some(entry),
+            suggestion: None,
+        });
     }
 
     // Build suggestion on NOT_FOUND
     let suggestion = build_suggestion(conn, &normalized, pair_id, &pair);
 
-    Ok(QueryResult { entry: None, suggestion })
+    Ok(QueryResult {
+        entry: None,
+        suggestion,
+    })
 }
 
 fn lookup_entry(
@@ -518,7 +533,11 @@ fn lookup_entry(
     }
 }
 
-fn load_definitions(conn: &Connection, entry_id: i64, pair_id: &str) -> SqlResult<Vec<DefinitionEntry>> {
+fn load_definitions(
+    conn: &Connection,
+    entry_id: i64,
+    pair_id: &str,
+) -> SqlResult<Vec<DefinitionEntry>> {
     let mut stmt = conn.prepare(
         "SELECT pos, explanation_src, explanation_tgt, example_src, example_tgt
          FROM definitions WHERE entry_id = ?1 AND pair_id = ?2 ORDER BY sort_order",
@@ -535,7 +554,11 @@ fn load_definitions(conn: &Connection, entry_id: i64, pair_id: &str) -> SqlResul
     rows.collect()
 }
 
-fn load_comparisons(conn: &Connection, entry_id: i64, pair_id: &str) -> SqlResult<Vec<ComparisonEntry>> {
+fn load_comparisons(
+    conn: &Connection,
+    entry_id: i64,
+    pair_id: &str,
+) -> SqlResult<Vec<ComparisonEntry>> {
     let mut stmt = conn.prepare(
         "SELECT word_to_compare, analysis FROM comparisons
          WHERE entry_id = ?1 AND pair_id = ?2 ORDER BY sort_order",
@@ -647,7 +670,8 @@ fn spellcheck_suggestion(
     let first_char = word.chars().next()?.to_string();
 
     let candidates: Vec<String> = {
-        let sql = "SELECT word FROM entries_en WHERE pair_id = ?1 AND word LIKE ?2 || '%' LIMIT 200";
+        let sql =
+            "SELECT word FROM entries_en WHERE pair_id = ?1 AND word LIKE ?2 || '%' LIMIT 200";
         let mut stmt = conn.prepare(sql).ok()?;
         let rows = stmt.query_map(params![pair_id, &first_char], |row| row.get::<_, String>(0));
         match rows {
@@ -685,13 +709,7 @@ fn english_lemma(word: &str) -> Option<String> {
         return None;
     }
 
-    let suffixes = [
-        ("ies", "y"),
-        ("es", ""),
-        ("s", ""),
-        ("ed", ""),
-        ("ing", ""),
-    ];
+    let suffixes = [("ies", "y"), ("es", ""), ("s", ""), ("ed", ""), ("ing", "")];
 
     for (suffix, replacement) in suffixes {
         if let Some(stem) = word.strip_suffix(suffix) {
@@ -801,7 +819,11 @@ pub fn upsert_entry(
     Ok(())
 }
 
-pub fn bulk_import(conn: &Connection, pair_id: &str, entries: &[WordDefinition]) -> SqlResult<usize> {
+pub fn bulk_import(
+    conn: &Connection,
+    pair_id: &str,
+    entries: &[WordDefinition],
+) -> SqlResult<usize> {
     if get_language_pair(conn, pair_id)?.is_none() {
         return Ok(0);
     }
@@ -857,8 +879,6 @@ pub fn resolve_pair_from_lang(conn: &Connection, lang: &str) -> SqlResult<Option
     let mut stmt = conn.prepare(
         "SELECT id FROM language_pairs WHERE source_lang = ?1 AND enabled = 1 ORDER BY order_idx LIMIT 1",
     )?;
-    let result: Option<String> = stmt
-        .query_row(params![lang], |row| row.get(0))
-        .ok();
+    let result: Option<String> = stmt.query_row(params![lang], |row| row.get(0)).ok();
     Ok(result)
 }
