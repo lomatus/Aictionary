@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import { useAtom } from "jotai";
 import { useCallback, useMemo } from "react";
 import { defaultSettings, settingsAtom } from "@/shared/state/settings";
@@ -134,6 +135,7 @@ export function useSettings() {
         ...current,
         language,
       }));
+      invoke("set_tray_language", { language }).catch(console.error);
     },
     [updateSettings]
   );

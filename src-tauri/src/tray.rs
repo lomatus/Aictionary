@@ -10,7 +10,12 @@
 
 #![cfg(desktop)]
 
-use tauri::{menu::MenuBuilder, tray::TrayIconBuilder, AppHandle, Emitter, Manager};
+use parking_lot::Mutex;
+use std::sync::Arc;
+use tauri::{
+    menu::{MenuBuilder, MenuItemBuilder},
+    AppHandle, Emitter, Listener, Manager,
+};
 
 // Stable identifiers so both Rust and JS can rely on them.
 pub const TRAY_ID: &str = "main-tray";
@@ -20,34 +25,128 @@ pub const MENU_ID_QUERY: &str = "tray-query";
 pub const MENU_ID_ABOUT: &str = "tray-about";
 pub const MENU_ID_EXIT: &str = "tray-exit";
 
-/// Creates the tray icon and attaches its menu.
-pub fn init_tray(app: &AppHandle) -> tauri::Result<()> {
+/// Language-aware menu labels.
+fn menu_labels(lang: &str) -> (&str, &str, &str, &str) {
+    match lang {
+        "zh" => ("打开", "新查询", "关于", "退出"),
+        _ => ("Open", "New query", "About", "Exit"),
+    }
+}
+
+/// Language state shared between init and the event listener.
+struct TrayState {
+    lang: Mutex<String>,
+}
+
+fn get_lang(app: &AppHandle) -> String {
+    let state = app.state::<Arc<TrayState>>();
+    let guard = state.lang.lock();
+    guard.clone()
+}
+
+fn set_lang(app: &AppHandle, lang: &str) {
+    let state = app.state::<Arc<TrayState>>();
+    *state.lang.lock() = lang.to_string();
+    if let Ok(app_dir) = app.path().app_data_dir() {
+        let lang_file = app_dir.join("language.txt");
+        let _ = std::fs::write(lang_file, lang);
+    }
+}
+
+fn load_lang(app: &AppHandle) -> String {
+    if let Ok(app_dir) = app.path().app_data_dir() {
+        let lang_file = app_dir.join("language.txt");
+        if let Ok(content) = std::fs::read_to_string(&lang_file) {
+            let lang = content.trim();
+            if lang == "en" || lang == "zh" {
+                return lang.to_string();
+            }
+        }
+    }
+    "en".to_string()
+}
+
+fn rebuild_tray(app: &AppHandle) -> tauri::Result<()> {
+    let lang = get_lang(app);
+    let (open_lbl, query_lbl, about_lbl, exit_lbl) = menu_labels(&lang);
+
     let handle = app.clone();
 
-    // Build the tray menu (IDs are used in the global menu handler).
     let menu = MenuBuilder::new(&handle)
-        .text(MENU_ID_OPEN, "Open")
-        .text(MENU_ID_QUERY, "New query")
+        .items(&[
+            &MenuItemBuilder::with_id(MENU_ID_OPEN, open_lbl).build(&handle)?,
+            &MenuItemBuilder::with_id(MENU_ID_QUERY, query_lbl).build(&handle)?,
+        ])
         .separator()
-        .text(MENU_ID_ABOUT, "About")
+        .items(&[&MenuItemBuilder::with_id(MENU_ID_ABOUT, about_lbl).build(&handle)?])
         .separator()
-        .text(MENU_ID_EXIT, "Exit")
+        .items(&[&MenuItemBuilder::with_id(MENU_ID_EXIT, exit_lbl).build(&handle)?])
         .build()?;
 
-    // Build the tray icon itself.
-    let mut builder = TrayIconBuilder::with_id(TRAY_ID)
-        .menu(&menu)
-        .show_menu_on_left_click(true)
-        .tooltip("AIctionary");
+    let tooltip = match lang.as_str() {
+        "zh" => "Aictionary 词典",
+        _ => "Aictionary",
+    };
 
-    // Try to reuse the default app icon for the tray, if available.
-    if let Some(icon) = app.default_window_icon() {
-        builder = builder.icon(icon.clone());
+    // Update the existing tray icon in place — do NOT build a new one.
+    if let Some(tray) = app.tray_by_id(TRAY_ID) {
+        let _ = tray.set_menu(Some(menu));
+        let _ = tray.set_tooltip(Some(tooltip));
     }
 
-    // We don't need the returned handle right now; it is kept internally
-    // by Tauri's tray manager and accessed later by ID.
-    let _tray = builder.build(&handle)?;
+    Ok(())
+}
+
+/// Creates the tray icon and attaches its menu.
+pub fn init_tray(app: &AppHandle) -> tauri::Result<()> {
+    let lang = load_lang(app);
+
+    let state = Arc::new(TrayState {
+        lang: Mutex::new(lang.clone()),
+    });
+    app.manage(state);
+
+    // Build the initial tray icon once.
+    {
+        let handle = app.clone();
+        let (open_lbl, query_lbl, about_lbl, exit_lbl) = menu_labels(&lang);
+        let menu = MenuBuilder::new(&handle)
+            .items(&[
+                &MenuItemBuilder::with_id(MENU_ID_OPEN, open_lbl).build(&handle)?,
+                &MenuItemBuilder::with_id(MENU_ID_QUERY, query_lbl).build(&handle)?,
+            ])
+            .separator()
+            .items(&[&MenuItemBuilder::with_id(MENU_ID_ABOUT, about_lbl).build(&handle)?])
+            .separator()
+            .items(&[&MenuItemBuilder::with_id(MENU_ID_EXIT, exit_lbl).build(&handle)?])
+            .build()?;
+
+        let tooltip = if lang == "zh" { "Aictionary 词典" } else { "Aictionary" };
+
+        let mut builder = tauri::tray::TrayIconBuilder::with_id(TRAY_ID)
+            .menu(&menu)
+            .show_menu_on_left_click(true)
+            .tooltip(tooltip);
+
+        let img_data = include_bytes!("../icons/tray-128x128.png");
+        if let Ok(img) = image::load_from_memory(img_data) {
+            use tauri::image::Image;
+            let rgba = img.to_rgba8();
+            let (w, h) = rgba.dimensions();
+            let icon = Image::new_owned(rgba.into_raw(), w, h);
+            builder = builder.icon(icon);
+        }
+
+        builder.build(&handle)?;
+    }
+
+    // Listen for language changes from the frontend.
+    let app_handle = app.clone();
+    app.listen("language-changed", move |event| {
+        let lang = event.payload();
+        set_lang(&app_handle, lang);
+        let _ = rebuild_tray(&app_handle);
+    });
 
     Ok(())
 }
@@ -98,4 +197,10 @@ fn handle_about(app: &AppHandle) {
 
     // Ask the frontend to navigate to Settings → About.
     let _ = app.emit("open-settings-about", ());
+}
+/// Called by the frontend via `invoke("set_language", { language })`.
+#[tauri::command]
+pub fn set_tray_language(app: tauri::AppHandle, language: String) -> Result<(), String> {
+    set_lang(&app, &language);
+    rebuild_tray(&app).map_err(|e| e.to_string())
 }

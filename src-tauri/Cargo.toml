@@ -1,5 +1,5 @@
 [package]
-name = "aictionary-re"
+name = "aictionary"
 version = "0.1.0"
 description = "A Tauri App"
 authors = ["you"]
@@ -13,7 +13,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2.6", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["tray-icon"] }
+tauri = { version = "2", features = ["tray-icon", "image-ico", "image-png"] }
 tauri-plugin-opener = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-global-shortcut = "2"
@@ -28,6 +28,7 @@ zip = "2.2"
 tauri-plugin-single-instance = { version = "2.3.6", features = ["deep-link"] }
 base64 = "0.22"
 rusqlite = { version = "0.32", features = ["bundled"] }
+image = "0.25"
 strsim = "0.11"
 dirs = "5"
 parking_lot = "0.12"

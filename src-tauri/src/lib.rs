@@ -101,6 +101,7 @@ pub fn run() {
             shortcuts::setup_shortcuts,
             // Tray commands
             set_tray_visibility,
+            tray::set_tray_language,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
