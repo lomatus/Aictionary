@@ -89,6 +89,7 @@ pub fn run() {
             llama_server::start_llama_server,
             llama_server::stop_llama_server,
             llama_server::get_llama_server_status,
+            llama_server::get_resource_dir,
             llama_server::test_llama_health,
             // Export commands
             export::export_learned_words,

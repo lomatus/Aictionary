@@ -1,11 +1,10 @@
 //! Llama server lifecycle management.
-//! The llama-server binary is managed externally by the user — this module
-//! just spawns it from a user-provided path.
 
 use parking_lot::Mutex;
 use std::net::TcpListener;
 use std::process::Child;
 use std::sync::Arc;
+use tauri::Manager;
 
 pub struct LlamaState {
     pub child: Mutex<Option<Child>>,
@@ -40,35 +39,78 @@ pub fn start_llama_server(
 ) -> Result<u16, String> {
     use std::process::Command;
 
+    eprintln!("[llama_server] binary_path: {}", binary_path);
+    eprintln!("[llama_server] model_path: {}", model_path);
+    eprintln!("[llama_server] cwd: {:?}", std::env::current_dir());
+
     kill_child(&state);
 
     let port = find_free_port(if hint_port == 0 { 11435 } else { hint_port });
+    eprintln!("[llama_server] using port: {}", port);
 
-    let mut child = Command::new(&binary_path)
-        .args([
-            "-m", &model_path,
-            "-c", &n_ctx.to_string(),
-            "--gpu-layers", &n_gpu_layers.to_string(),
-            "--host", "127.0.0.1",
-            "-p", &port.to_string(),
-        ])
-        .spawn()
-        .map_err(|e| format!("Failed to start llama-server: {}", e))?;
+    let binary_dir = std::path::Path::new(&binary_path)
+        .parent()
+        .map(|p| p.to_path_buf());
 
-    std::thread::sleep(std::time::Duration::from_millis(1500));
+    let mut child = match binary_dir {
+        Some(dir) => {
+            eprintln!(
+                "[llama_server] spawning with cwd: {:?}",
+                dir
+            );
+            Command::new(&binary_path)
+                .current_dir(&dir)
+                .args([
+                    "-m", &model_path,
+                    "-c", &n_ctx.to_string(),
+                    "--gpu-layers", &n_gpu_layers.to_string(),
+                    "--host", "127.0.0.1",
+                    "--port", &port.to_string(),
+                ])
+                .spawn()
+        }
+        None => {
+            eprintln!("[llama_server] spawning with default cwd");
+            Command::new(&binary_path)
+                .args([
+                    "-m", &model_path,
+                    "-c", &n_ctx.to_string(),
+                    "--gpu-layers", &n_gpu_layers.to_string(),
+                    "--host", "127.0.0.1",
+                    "--port", &port.to_string(),
+                ])
+                .spawn()
+        }
+    }
+    .map_err(|e| format!("Failed to spawn llama-server: {}", e))?;
 
-    // Try to verify it didn't exit immediately
+    eprintln!("[llama_server] child spawned, waiting 2s...");
+    std::thread::sleep(std::time::Duration::from_secs(2));
+
+    eprintln!("[llama_server] checking try_wait...");
     match child.try_wait() {
-        Ok(Some(exit)) => Err(format!(
-            "llama-server exited immediately with code {:?}. Check the binary path and model file.",
-            exit.code()
-        )),
+        Ok(Some(exit)) => {
+            eprintln!("[llama_server] exited immediately: {:?}", exit);
+            if let Ok(status) = child.wait() {
+                eprintln!("[llama_server] wait status: {:?}", status);
+            }
+            Err(format!(
+                "llama-server exited immediately with code {:?}. binary={} model={}",
+                exit.code(),
+                binary_path,
+                model_path,
+            ))
+        }
         Ok(None) => {
+            eprintln!("[llama_server] still running, storing handle");
             *state.child.lock() = Some(child);
             *state.port.lock() = port;
             Ok(port)
         }
-        Err(e) => Err(format!("Failed to query llama-server process state: {}", e)),
+        Err(e) => {
+            eprintln!("[llama_server] try_wait error: {}", e);
+            Err(format!("try_wait error: {}", e))
+        }
     }
 }
 
@@ -103,6 +145,14 @@ pub fn get_llama_server_status(
 pub struct LlamaStatus {
     pub running: bool,
     pub port: u16,
+}
+
+#[tauri::command]
+pub async fn get_resource_dir(app: tauri::AppHandle) -> Result<String, String> {
+    app.path()
+        .resource_dir()
+        .map(|p| p.to_string_lossy().to_string())
+        .map_err(|e| format!("Failed to resolve resource dir: {e}"))
 }
 
 #[tauri::command]

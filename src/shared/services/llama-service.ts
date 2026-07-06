@@ -37,16 +37,34 @@ export async function getLlamaServerStatus(): Promise<LlamaServerStatus> {
   return invoke<LlamaServerStatus>("get_llama_server_status");
 }
 
-interface CompletionResponse {
-  content?: string;
-  stop?: boolean;
+/** Get the app's bundled resource directory path. */
+export async function getResourceDir(): Promise<string> {
+  return invoke<string>("get_resource_dir");
 }
 
-/** Translate text via llama-server's /completion endpoint. */
+interface ChatCompletionMessage {
+  role: "user";
+  content: string;
+}
+
+interface ChatCompletionResponse {
+  choices?: Array<{
+    message?: { content?: string };
+    finish_reason?: string;
+  }>;
+  content?: string;
+}
+
+/**
+ * Translate text via llama-server's OpenAI-compatible /v1/chat/completions endpoint.
+ * If `prompt` is provided and non-empty, placeholders {source_text} and {target_lang}
+ * are substituted and wrapped in a user message. Otherwise a default message is used.
+ */
 export async function translateTextWithLlama(
   text: string,
   targetLang: string,
   port: number,
+  prompt?: string,
 ): Promise<{ sourceText: string; translatedText: string; targetLang: string }> {
   const trimmed = text.trim();
   if (!trimmed) {
@@ -58,7 +76,18 @@ export async function translateTextWithLlama(
     );
   }
 
-  const url = `http://localhost:${port}/completion`;
+  let userContent: string;
+  if (prompt && prompt.trim().length > 0) {
+    userContent = prompt
+      .replace("{source_text}", trimmed)
+      .replace("{target_lang}", targetLang);
+  } else {
+    userContent = `Translate the following text into ${targetLang}. Only output the translation, no explanation.\n\n${trimmed}`;
+  }
+
+  console.log(`[llama] /v1/chat/completions body:\n${JSON.stringify({ messages: [{ role: "user", content: userContent }] }, null, 2)}\n---`);
+
+  const url = `http://localhost:${port}/v1/chat/completions`;
 
   let response: Response;
   try {
@@ -69,10 +98,13 @@ export async function translateTextWithLlama(
       headers: { "Content-Type": "application/json" },
       signal: controller.signal,
       body: JSON.stringify({
-        prompt: `You are a professional translator. Translate into ${targetLang}. Only output the translation, no explanation.\n\n${trimmed}`,
-        n_predict: 512,
-        temperature: 0.3,
-        stop: ["</s>", "\n\n\n"],
+        messages: [{ role: "user", content: userContent } satisfies ChatCompletionMessage],
+        temperature: 0.7,
+        top_p: 0.6,
+        top_k: 20,
+        repeat_penalty: 1.05,
+        max_tokens: 4096,
+        stop: ["</s>"],
       }),
     });
     clearTimeout(timer);
@@ -93,14 +125,18 @@ export async function translateTextWithLlama(
     throw new LlamaServiceError(`Llama server ${response.status}: ${textBody}`);
   }
 
-  let data: CompletionResponse;
+  let data: ChatCompletionResponse;
   try {
-    data = await response.json() as CompletionResponse;
+    data = await response.json() as ChatCompletionResponse;
   } catch {
     throw new LlamaServiceError("Llama server returned invalid JSON response.");
   }
 
-  const content = data.content?.trim();
+  // Support both chat format (choices[].message.content) and legacy content field
+  const content =
+    data.choices?.[0]?.message?.content?.trim() ??
+    data.content?.trim();
+
   if (!content) {
     throw new LlamaServiceError(
       `Llama returned empty content. Response: ${JSON.stringify(data).slice(0, 200)}`

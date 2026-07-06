@@ -125,7 +125,8 @@ export function useDictionarySearch() {
             const translated = await translateTextWithLlama(
               normalized,
               targetLang,
-              settings.localLlm.serverPort || 11435
+              settings.localLlm.serverPort || 11435,
+              settings.promptTemplates.translation
             );
             setTranslationResult({
               sourceText: normalized,

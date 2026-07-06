@@ -13,11 +13,13 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { listen } from "@tauri-apps/api/event";
+import { open } from "@tauri-apps/plugin-dialog";
 import { useSettings } from "@/features/settings/hooks/use-settings";
 import {
   startLlamaServer,
   stopLlamaServer,
   getLlamaServerStatus,
+  getResourceDir,
 } from "@/shared/services/llama-service";
 
 const DEFAULT_TRANSLATION_PLACEHOLDER =
@@ -37,11 +39,34 @@ export function LlmProvidersTab() {
   const [isServerRunning, setIsServerRunning] = useState(false);
   const [serverPort, setServerPort] = useState(0);
   const [isStarting, setIsStarting] = useState(false);
+  const [resourceDir, setResourceDir] = useState<string>("");
 
-  // Keep local state in sync when toggling
+  useEffect(() => {
+    getResourceDir().then(setResourceDir).catch(() => {});
+  }, []);
+
   useEffect(() => {
     setMode(settings.localLlm.enabled ? "local" : "cloud");
   }, [settings.localLlm.enabled]);
+
+  const handleModeChange = (newMode: LlmMode) => {
+    if (newMode === "local") {
+      const defaultBinary = resourceDir
+        ? `${resourceDir}\\binaries\\llama-server\\llama-server.exe`
+        : "";
+      const defaultModel = resourceDir
+        ? `${resourceDir}\\models\\Hy-MT2-1.8B-Q4_K_M.gguf`
+        : "";
+      updateLocalLlm({
+        enabled: true,
+        binaryPath: settings.localLlm.binaryPath || defaultBinary,
+        modelPath: settings.localLlm.modelPath || defaultModel,
+      });
+    } else {
+      updateLocalLlm({ enabled: false });
+    }
+    setMode(newMode);
+  };
 
   useEffect(() => {
     if (mode !== "local") {
@@ -55,8 +80,12 @@ export function LlmProvidersTab() {
     listen<{ running: boolean; port: number }>("llama-server-status", (event) => {
       setIsServerRunning(event.payload.running);
       setServerPort(event.payload.port);
-      updateLocalLlm({ serverPort: event.payload.running ? event.payload.port : 0 });
-    }).then((fn) => { unlisten = fn; });
+      updateLocalLlm({
+        serverPort: event.payload.running ? event.payload.port : 0,
+      });
+    }).then((fn) => {
+      unlisten = fn;
+    });
 
     getLlamaServerStatus()
       .then((status) => {
@@ -80,18 +109,39 @@ export function LlmProvidersTab() {
     };
   }, [mode]);
 
-  const handleModeChange = (newMode: LlmMode) => {
-    setMode(newMode);
-    updateLocalLlm({ enabled: newMode === "local" });
+  const handleBrowseBinary = async () => {
+    const selected = await open({
+      multiple: false,
+      filters: [{ name: "Executable", extensions: ["exe"] }],
+      defaultPath: resourceDir
+        ? `${resourceDir}\\binaries\\llama-server\\llama-server.exe`
+        : undefined,
+    });
+    if (selected) {
+      updateLocalLlm({ binaryPath: selected as string });
+    }
+  };
+
+  const handleBrowseModel = async () => {
+    const selected = await open({
+      multiple: false,
+      filters: [{ name: "GGUF Model", extensions: ["gguf"] }],
+      defaultPath: resourceDir
+        ? `${resourceDir}\\models\\Hy-MT2-1.8B-Q4_K_M.gguf`
+        : undefined,
+    });
+    if (selected) {
+      updateLocalLlm({ modelPath: selected as string });
+    }
   };
 
   const handleStartServer = async () => {
     if (!settings.localLlm.binaryPath.trim()) {
-      toast.error("Please enter the path to llama-server.exe");
+      toast.error("Please select llama-server.exe");
       return;
     }
     if (!settings.localLlm.modelPath.trim()) {
-      toast.error("Please enter the path to the model file (.gguf)");
+      toast.error("Please select the model file (.gguf)");
       return;
     }
 
@@ -137,7 +187,6 @@ export function LlmProvidersTab() {
               <CardTitle>{t("settings.llm.title")}</CardTitle>
               <CardDescription>{t("settings.llm.description")}</CardDescription>
             </div>
-            {/* Segmented mode toggle */}
             <div className="flex rounded-md border bg-muted p-0.5 gap-0.5">
               <button
                 onClick={() => handleModeChange("cloud")}
@@ -164,20 +213,25 @@ export function LlmProvidersTab() {
         </CardHeader>
 
         <CardContent className="grid gap-6">
-          {/* ── Cloud mode fields ── */}
           {mode === "cloud" && (
             <div className="grid gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="llm-base-url">{t("settings.llm.base_url.label")}</Label>
+                <Label htmlFor="llm-base-url">
+                  {t("settings.llm.base_url.label")}
+                </Label>
                 <Input
                   id="llm-base-url"
                   placeholder={t("settings.llm.base_url.placeholder")}
                   value={settings.llm.baseUrl}
-                  onChange={(e) => updateLlm({ baseUrl: e.target.value.trim() })}
+                  onChange={(e) =>
+                    updateLlm({ baseUrl: e.target.value.trim() })
+                  }
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="llm-api-key">{t("settings.llm.api_key.label")}</Label>
+                <Label htmlFor="llm-api-key">
+                  {t("settings.llm.api_key.label")}
+                </Label>
                 <Input
                   id="llm-api-key"
                   type="password"
@@ -189,31 +243,44 @@ export function LlmProvidersTab() {
             </div>
           )}
 
-          {/* ── Local mode fields ── */}
           {mode === "local" && (
             <div className="grid gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="llama-binary-path">llama-server.exe path</Label>
-                <Input
-                  id="llama-binary-path"
-                  placeholder="C:\path\to\llama-server.exe"
-                  value={settings.localLlm.binaryPath}
-                  onChange={(e) =>
-                    updateLocalLlm({ binaryPath: e.target.value.trim() })
-                  }
-                />
+                <Label>llama-server.exe</Label>
+                <div className="flex gap-2">
+                  <Input
+                    readOnly
+                    placeholder="Select llama-server.exe..."
+                    value={settings.localLlm.binaryPath}
+                    className="flex-1 bg-muted"
+                  />
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleBrowseBinary}
+                  >
+                    Browse
+                  </Button>
+                </div>
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="llama-model-path">Model file path (.gguf)</Label>
-                <Input
-                  id="llama-model-path"
-                  placeholder="C:\path\to\Hy-MT2-1.8B-Q4_K_M.gguf"
-                  value={settings.localLlm.modelPath}
-                  onChange={(e) =>
-                    updateLocalLlm({ modelPath: e.target.value.trim() })
-                  }
-                />
+                <Label>Model file (.gguf)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    readOnly
+                    placeholder="Select model file..."
+                    value={settings.localLlm.modelPath}
+                    className="flex-1 bg-muted"
+                  />
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleBrowseModel}
+                  >
+                    Browse
+                  </Button>
+                </div>
               </div>
 
               <div className="flex items-center justify-between pt-2 border-t">
@@ -253,7 +320,7 @@ export function LlmProvidersTab() {
         </CardContent>
       </Card>
 
-      {/* ── Prompts Card (always visible) ── */}
+      {/* ── Prompts Card ── */}
       <Card>
         <CardHeader>
           <CardTitle>{t("settings.prompts.title")}</CardTitle>
@@ -267,7 +334,9 @@ export function LlmProvidersTab() {
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  updatePromptTemplates({ translation: DEFAULT_TRANSLATION_PLACEHOLDER });
+                  updatePromptTemplates({
+                    translation: DEFAULT_TRANSLATION_PLACEHOLDER,
+                  });
                   toast.success(t("settings.prompts.reset_success"));
                 }}
                 className="text-xs"
@@ -292,7 +361,9 @@ export function LlmProvidersTab() {
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  updatePromptTemplates({ definition: DEFAULT_DEFINITION_PLACEHOLDER });
+                  updatePromptTemplates({
+                    definition: DEFAULT_DEFINITION_PLACEHOLDER,
+                  });
                   toast.success(t("settings.prompts.reset_success"));
                 }}
                 className="text-xs"
