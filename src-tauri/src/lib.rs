@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use tauri::Manager;
 
 // Module declarations
@@ -5,7 +6,7 @@ mod audio_cache;
 mod dictionary;
 mod download;
 mod export;
-mod llm;
+mod llama_server;
 mod shortcuts;
 #[cfg(desktop)]
 mod tray;
@@ -19,12 +20,9 @@ fn set_tray_visibility(app: tauri::AppHandle, visible: bool) -> Result<(), Strin
             .set_visible(visible)
             .map_err(|e| format!("Failed to update tray visibility: {e}"))?;
     }
-
     Ok(())
 }
 
-// No-op fallback on platforms without tray support so the frontend
-// can still call the command without compile-time cfg gymnastics.
 #[tauri::command]
 #[cfg(not(desktop))]
 fn set_tray_visibility(_app: tauri::AppHandle, _visible: bool) -> Result<(), String> {
@@ -52,6 +50,9 @@ pub fn run() {
 
                 let handle = app.handle();
 
+                // Manage LlamaState so commands can share the server process handle.
+                app.manage(Arc::new(llama_server::LlamaState::default()));
+
                 // Initialize tray icon and menu.
                 tray::init_tray(&handle)?;
                 tray::register_menu_handler(&handle);
@@ -69,6 +70,9 @@ pub fn run() {
                 }
             }
 
+            #[cfg(not(desktop))]
+            let _ = app;
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -81,17 +85,17 @@ pub fn run() {
             dictionary::get_language_pairs,
             dictionary::import_dictionary_from_dir,
             dictionary::is_sentence,
-            // LLM commands
-            llm::test_llm_provider,
+            // Llama server commands (local inference)
+            llama_server::start_llama_server,
+            llama_server::stop_llama_server,
+            llama_server::get_llama_server_status,
+            llama_server::test_llama_health,
             // Export commands
             export::export_learned_words,
             export::export_query_metrics,
             // Download commands
             download::download_file,
             download::extract_zip,
-            download::download_and_extract,
-            download::spawn_llama_server,
-            download::stop_llama_server,
             // Audio cache commands
             audio_cache::resolve_audio_cache_entry,
             audio_cache::read_audio_cache_file,

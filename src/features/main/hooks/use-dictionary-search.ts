@@ -26,6 +26,7 @@ import {
   hasLlmCredentials,
   LlmServiceError,
 } from "@/shared/services/llm-service";
+import { translateTextWithLlama } from "@/shared/services/llama-service";
 
 export function useDictionarySearch() {
   const { t } = useTranslation();
@@ -43,34 +44,25 @@ export function useDictionarySearch() {
   const suggest = useCallback(
     async (word: string): Promise<string[]> => {
       const normalized = word.trim();
-      if (normalized.length < 2) {
-        setSuggestion(null);
-        return [];
-      }
-
-      const inputLang = detectLanguage(normalized);
-      const pairId = resolvePairId(settings.dictionary.dictType, inputLang);
-
+      if (!normalized) return [];
+      if (!settings.dictionary.cachePath.trim()) return [];
       try {
-        const queryResult: QueryResult = await queryDictionary(normalized, pairId);
-        if (queryResult.suggestion) {
-          setSuggestion(queryResult.suggestion);
-          setLastQuery(normalized);
-          const s = queryResult.suggestion;
-          if (s.type === "Prefix") return s.words;
-          if (s.type === "Spellcheck") return s.candidates.map((c) => c.word);
-          if (s.type === "Lemma") return [s.lemma];
-          return [];
-        } else {
-          setSuggestion(null);
-          return [];
+        const lang = detectLanguage(normalized);
+        const pairId = resolvePairId(settings.dictionary.dictType, lang);
+        const r = await queryDictionary(normalized, pairId);
+        if (!r.suggestion) return [];
+        if (r.suggestion.type === "Spellcheck") {
+          return r.suggestion.candidates.map((c) => c.word);
         }
+        if (r.suggestion.type === "Prefix") {
+          return r.suggestion.words;
+        }
+        return [];
       } catch {
-        setSuggestion(null);
         return [];
       }
     },
-    [settings.dictionary.dictType]
+    [settings.dictionary.dictType, settings.dictionary.cachePath]
   );
 
   const search = useCallback(
@@ -121,6 +113,36 @@ export function useDictionarySearch() {
           return;
         }
 
+        // ── Local LLM path ─────────────────────────────────────────────
+        if (settings.localLlm.enabled && settings.localLlm.binaryPath.trim()) {
+          setResult({ result: null });
+          setGeneratingModel("local");
+          setIsGeneratingFromLlm(true);
+
+          try {
+            const targetLang = pairId.includes("zh") ? "Chinese" : "Spanish";
+
+            const translated = await translateTextWithLlama(
+              normalized,
+              targetLang,
+              settings.localLlm.serverPort || 11435
+            );
+            setTranslationResult({
+              sourceText: normalized,
+              translatedText: translated.translatedText,
+              targetLang,
+            });
+          } catch (llmError) {
+            console.error(llmError);
+            toast.error(t("main.llm.error"));
+          } finally {
+            setIsGeneratingFromLlm(false);
+            setGeneratingModel(null);
+          }
+          return;
+        }
+
+        // ── Remote LLM path ────────────────────────────────────────────
         if (!hasLlmCredentials(settings.llm)) {
           toast.error(t("main.llm.missing_config"));
           setIsSearching(false);
@@ -167,10 +189,13 @@ export function useDictionarySearch() {
       setIsSearching,
       setIsGeneratingFromLlm,
       setGeneratingModel,
+      setSuggestion,
       setTranslationResult,
-      settings.dictionary.cachePath,
-      settings.dictionary.dictType,
+      settings.localLlm,
       settings.llm,
+      settings.dictionary,
+      settings.glossary,
+      settings.promptTemplates,
       t,
     ]
   );
@@ -179,7 +204,6 @@ export function useDictionarySearch() {
     setResult({ result: null });
     setSuggestion(null);
     setTranslationResult(null);
-    setLastQuery("");
   }, [setResult, setSuggestion, setTranslationResult]);
 
   const clearSuggestion = useCallback(() => {
@@ -187,17 +211,17 @@ export function useDictionarySearch() {
   }, [setSuggestion]);
 
   return {
-    isSearching,
-    isGeneratingFromLlm,
-    generatingModel,
-    history,
-    result,
-    suggestion,
-    lastQuery,
-    translationResult,
     search,
     suggest,
     clear,
     clearSuggestion,
+    isSearching,
+    suggestion,
+    lastQuery,
+    history,
+    result,
+    translationResult,
+    isGeneratingFromLlm,
+    generatingModel,
   };
 }

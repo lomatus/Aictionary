@@ -79,7 +79,7 @@ export function AppLayout() {
                   updateSettings({ dictionary: { ...settings.dictionary, dictType: val } })
                 }
               >
-                <SelectTrigger className="bg-transparent shrink-0 font-mono text-xs font-extrabold h-9 border-0 px-1 mt-2">
+                <SelectTrigger className="bg-transparent shrink-0 font-mono text-xs font-extrabold h-9 border-0 px-1">
                   <SelectValue className="text-primary font-extrabold" />
                 </SelectTrigger>
                 <SelectContent>

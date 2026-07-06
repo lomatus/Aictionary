@@ -13,13 +13,9 @@ export type LlmProvider = {
 
 export type LocalLlmSettings = {
   enabled: boolean;
-  llamaCppPath: string; // Path to llama.cpp binary
-  modelPath: string; // Path to model file
-  modelUrl: string; // Download URL for the model
-  nCtx: number; // Context size
-  nGpu: number; // GPU layers (0 = CPU only)
-  isDownloading: boolean;
-  downloadProgress: number;
+  binaryPath: string;   // absolute path to llama-server.exe
+  modelPath: string;    // absolute path to Hy-MT2-1.8B-Q4_K_M.gguf
+  serverPort: number;  // port the server is listening on (0 = not running)
 };
 
 export type AudioSettings = {
