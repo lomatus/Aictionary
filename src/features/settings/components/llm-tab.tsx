@@ -124,37 +124,39 @@ export function LlmProvidersTab() {
 
   return (
     <div className="grid gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("settings.llm.title")}</CardTitle>
-          <CardDescription>{t("settings.llm.description")}</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="llm-base-url">{t("settings.llm.base_url.label")}</Label>
-            <Input
-              id="llm-base-url"
-              placeholder={t("settings.llm.base_url.placeholder")}
-              value={settings.llm.baseUrl}
-              onChange={(e) => updateLlm({ baseUrl: e.target.value.trim() })}
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="llm-api-key">{t("settings.llm.api_key.label")}</Label>
-            <Input
-              id="llm-api-key"
-              type="password"
-              placeholder={t("settings.llm.api_key.placeholder")}
-              value={settings.llm.apiKey}
-              onChange={(e) => updateLlm({ apiKey: e.target.value })}
-            />
-          </div>
-        </CardContent>
-      </Card>
+      {!settings.localLlm.enabled && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("settings.llm.title")}</CardTitle>
+            <CardDescription>{t("settings.llm.description")}</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="llm-base-url">{t("settings.llm.base_url.label")}</Label>
+              <Input
+                id="llm-base-url"
+                placeholder={t("settings.llm.base_url.placeholder")}
+                value={settings.llm.baseUrl}
+                onChange={(e) => updateLlm({ baseUrl: e.target.value.trim() })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="llm-api-key">{t("settings.llm.api_key.label")}</Label>
+              <Input
+                id="llm-api-key"
+                type="password"
+                placeholder={t("settings.llm.api_key.placeholder")}
+                value={settings.llm.apiKey}
+                onChange={(e) => updateLlm({ apiKey: e.target.value })}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
-          <CardTitle>Local Inference (llama-server)</CardTitle>
+          <CardTitle>Local Inference</CardTitle>
           <CardDescription>
             Use a local llama-server binary with a GGUF model instead of a cloud API.
           </CardDescription>
@@ -164,7 +166,7 @@ export function LlmProvidersTab() {
             <div className="grid gap-1">
               <Label>Enable Local Inference</Label>
               <p className="text-xs text-muted-foreground">
-                Configure llama-server binary and model paths below
+                Requires llama-server and a GGUF model on your machine
               </p>
             </div>
             <Switch
@@ -173,122 +175,128 @@ export function LlmProvidersTab() {
             />
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="llama-binary-path">llama-server.exe path</Label>
-            <Input
-              id="llama-binary-path"
-              placeholder="C:\path\to\llama-server.exe"
-              value={settings.localLlm.binaryPath}
-              onChange={(e) =>
-                updateLocalLlm({ binaryPath: e.target.value.trim() })
-              }
-            />
-          </div>
+          {settings.localLlm.enabled && (
+            <>
+              <div className="grid gap-2">
+                <Label htmlFor="llama-binary-path">llama-server.exe path</Label>
+                <Input
+                  id="llama-binary-path"
+                  placeholder="C:\path\to\llama-server.exe"
+                  value={settings.localLlm.binaryPath}
+                  onChange={(e) =>
+                    updateLocalLlm({ binaryPath: e.target.value.trim() })
+                  }
+                />
+              </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="llama-model-path">Model file path (.gguf)</Label>
-            <Input
-              id="llama-model-path"
-              placeholder="C:\path\to\Hy-MT2-1.8B-Q4_K_M.gguf"
-              value={settings.localLlm.modelPath}
-              onChange={(e) =>
-                updateLocalLlm({ modelPath: e.target.value.trim() })
-              }
-            />
-          </div>
+              <div className="grid gap-2">
+                <Label htmlFor="llama-model-path">Model file path (.gguf)</Label>
+                <Input
+                  id="llama-model-path"
+                  placeholder="C:\path\to\Hy-MT2-1.8B-Q4_K_M.gguf"
+                  value={settings.localLlm.modelPath}
+                  onChange={(e) =>
+                    updateLocalLlm({ modelPath: e.target.value.trim() })
+                  }
+                />
+              </div>
 
-          <div className="flex items-center justify-between pt-2 border-t">
-            <div className="flex items-center gap-2">
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  isServerRunning ? "bg-green-500" : "bg-red-500"
-                }`}
+              <div className="flex items-center justify-between pt-2 border-t">
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`w-2 h-2 rounded-full ${
+                      isServerRunning ? "bg-green-500" : "bg-red-500"
+                    }`}
+                  />
+                  <span className="text-sm">
+                    {isServerRunning
+                      ? `Running on port ${serverPort}`
+                      : "Stopped"}
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleStartServer}
+                    disabled={isServerRunning || isStarting}
+                  >
+                    {isStarting ? "Starting..." : "Start Server"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleStopServer}
+                    disabled={!isServerRunning}
+                  >
+                    Stop Server
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {!settings.localLlm.enabled && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("settings.prompts.title")}</CardTitle>
+            <CardDescription>{t("settings.prompts.description")}</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-6">
+            <div className="grid gap-2">
+              <div className="flex items-center justify-between">
+                <Label>{t("settings.prompts.translation_label")}</Label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    updatePromptTemplates({ translation: DEFAULT_TRANSLATION_PLACEHOLDER });
+                    toast.success(t("settings.prompts.reset_success"));
+                  }}
+                  className="text-xs"
+                >
+                  {t("settings.prompts.reset")}
+                </Button>
+              </div>
+              <Textarea
+                value={settings.promptTemplates.translation}
+                onChange={(e) =>
+                  updatePromptTemplates({ translation: e.target.value })
+                }
+                placeholder={DEFAULT_TRANSLATION_PLACEHOLDER}
+                className="min-h-[120px] font-mono text-xs"
               />
-              <span className="text-sm">
-                {isServerRunning
-                  ? `Llama: Running on port ${serverPort}`
-                  : "Llama: Stopped"}
-              </span>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleStartServer}
-                disabled={isServerRunning || isStarting}
-              >
-                {isStarting ? "Starting..." : "Start Server"}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleStopServer}
-                disabled={!isServerRunning}
-              >
-                Stop Server
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("settings.prompts.title")}</CardTitle>
-          <CardDescription>{t("settings.prompts.description")}</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-6">
-          <div className="grid gap-2">
-            <div className="flex items-center justify-between">
-              <Label>{t("settings.prompts.translation_label")}</Label>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  updatePromptTemplates({ translation: DEFAULT_TRANSLATION_PLACEHOLDER });
-                  toast.success(t("settings.prompts.reset_success"));
-                }}
-                className="text-xs"
-              >
-                {t("settings.prompts.reset")}
-              </Button>
+            <div className="grid gap-2">
+              <div className="flex items-center justify-between">
+                <Label>{t("settings.prompts.definition_label")}</Label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    updatePromptTemplates({ definition: DEFAULT_DEFINITION_PLACEHOLDER });
+                    toast.success(t("settings.prompts.reset_success"));
+                  }}
+                  className="text-xs"
+                >
+                  {t("settings.prompts.reset")}
+                </Button>
+              </div>
+              <Textarea
+                value={settings.promptTemplates.definition}
+                onChange={(e) =>
+                  updatePromptTemplates({ definition: e.target.value })
+                }
+                placeholder={DEFAULT_DEFINITION_PLACEHOLDER}
+                className="min-h-[120px] font-mono text-xs"
+              />
             </div>
-            <Textarea
-              value={settings.promptTemplates.translation}
-              onChange={(e) =>
-                updatePromptTemplates({ translation: e.target.value })
-              }
-              placeholder={DEFAULT_TRANSLATION_PLACEHOLDER}
-              className="min-h-[120px] font-mono text-xs"
-            />
-          </div>
-
-          <div className="grid gap-2">
-            <div className="flex items-center justify-between">
-              <Label>{t("settings.prompts.definition_label")}</Label>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  updatePromptTemplates({ definition: DEFAULT_DEFINITION_PLACEHOLDER });
-                  toast.success(t("settings.prompts.reset_success"));
-                }}
-                className="text-xs"
-              >
-                {t("settings.prompts.reset")}
-              </Button>
-            </div>
-            <Textarea
-              value={settings.promptTemplates.definition}
-              onChange={(e) =>
-                updatePromptTemplates({ definition: e.target.value })
-              }
-              placeholder={DEFAULT_DEFINITION_PLACEHOLDER}
-              className="min-h-[120px] font-mono text-xs"
-            />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
