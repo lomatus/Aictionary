@@ -63,16 +63,16 @@ export function AppLayout() {
   return (
     <SearchProvider search={search} suggest={suggest} isSearching={isSearching}>
       <div className="bg-background text-foreground flex min-h-screen flex-col">
-        <header className="border-b sticky top-0 z-50 bg-background/80 backdrop-blur-sm">
-          <div className="mx-auto flex h-14 w-full items-center gap-2 px-4 mt-px">
-            <div className="titlebar" data-tauri-drag-region>
+        <header className="border-b sticky top-0 z-50" data-tauri-drag-region="true">
+          <div className="mx-auto flex h-14 w-full items-center gap-2 px-2 mt-px">
+            <div className="titlebar" data-tauri-drag-region="true">
               <img
                 src={logoSrc}
                 alt="Aictionary"
                 className="h-[50px] w-[50px] object-contain"
               />
             </div>
-            <div className="flex flex-1">
+            <div className="flex flex-1" data-tauri-drag-region="false">
               <Select
                 value={settings.dictionary.dictType}
                 onValueChange={(val) =>
@@ -91,6 +91,7 @@ export function AppLayout() {
             </div>
 
             <SmartDictInput
+              data-tauri-drag-region="false"
               ref={smartInputRef}
               onWordLookup={search}
               onTranslate={search}
@@ -99,7 +100,7 @@ export function AppLayout() {
               suggestions={[]}
             />
 
-            <div className="flex shrink-0 items-center gap-1">
+            <div className="flex shrink-0 items-center gap-1" data-tauri-drag-region="false">
               <button
                 onClick={() => navigate("/statistics")}
                 className="text-muted-foreground hover:text-foreground inline-flex items-center rounded-md p-2 transition-colors hover:bg-muted/60"
@@ -131,7 +132,7 @@ export function AppLayout() {
 
         <main
           className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pt-5 mt-5 pb-6 overflow-y-auto"
-          style={{ maxHeight: "calc(100dvh - 100px)" }}
+          style={{ maxHeight: "calc(100dvh - 78px)" }}
         >
           <Outlet />
         </main>

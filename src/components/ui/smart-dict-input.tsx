@@ -201,7 +201,7 @@ export const SmartDictInput = forwardRef<SmartDictInputRef, SmartDictInputProps>
                 "scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent",
                 isExpanded && isFocused
                   ? "min-h-[180px]"
-                  : "h-[44px] max-h-[44px]",
+                  : "h-11 max-h-11",
                 !isFocused && isExpanded && "truncate",
                 disabled && "opacity-50 cursor-not-allowed",
               )}
