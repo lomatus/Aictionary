@@ -149,3 +149,165 @@ export async function translateTextWithLlama(
     targetLang,
   };
 }
+
+/**
+ * Generate a word definition via llama-server's OpenAI-compatible /v1/chat/completions endpoint.
+ * Sends the word as user content with the custom definition prompt as system context.
+ * Parses the JSON response into a WordDefinition.
+ */
+export async function generateDefinitionWithLlama(
+  word: string,
+  port: number,
+  systemPrompt: string
+): Promise<{
+  word: string;
+  pronunciation: string;
+  concise_definition: string;
+  forms: Record<string, string>;
+  definitions: Array<{
+    pos: string;
+    explanation_en: string;
+    explanation_cn: string;
+    example_en: string;
+    example_cn: string;
+  }>;
+  comparison: Array<{ word_to_compare: string; analysis: string }>;
+}> {
+  const trimmed = word.trim();
+  if (!trimmed) {
+    throw new LlamaServiceError("Word is required.");
+  }
+  if (!port || port <= 0) {
+    throw new LlamaServiceError(
+      `Llama server port not configured (${port}). Start the llama server first.`
+    );
+  }
+
+  const url = `http://localhost:${port}/v1/chat/completions`;
+
+  let response: Response;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 120_000);
+    response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
+      body: JSON.stringify({
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: trimmed },
+        ],
+        temperature: 0.1,
+        max_tokens: 4096,
+        stop: ["</s>"],
+      }),
+    });
+    clearTimeout(timer);
+  } catch (err: unknown) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new LlamaServiceError("Llama request timed out after 2 minutes.");
+    }
+    throw new LlamaServiceError(
+      `Network error reaching llama-server at ${url}: ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+
+  if (!response.ok) {
+    let textBody = "(could not read response body)";
+    try {
+      textBody = await response.text();
+    } catch { /* ignore */ }
+    throw new LlamaServiceError(`Llama server ${response.status}: ${textBody}`);
+  }
+
+  let data: ChatCompletionResponse;
+  try {
+    data = await response.json() as ChatCompletionResponse;
+  } catch {
+    throw new LlamaServiceError("Llama server returned invalid JSON response.");
+  }
+
+  const content =
+    data.choices?.[0]?.message?.content?.trim() ??
+    data.content?.trim();
+
+  if (!content) {
+    throw new LlamaServiceError(
+      `Llama returned empty content. Response: ${JSON.stringify(data).slice(0, 200)}`
+    );
+  }
+
+  // Strip markdown code fences if present
+  const jsonStr = content.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(jsonStr);
+  } catch {
+    throw new LlamaServiceError(
+      `Llama response is not valid JSON: ${jsonStr.slice(0, 200)}`
+    );
+  }
+
+  if (typeof parsed !== "object" || parsed === null) {
+    throw new LlamaServiceError(
+      `Expected JSON object, got: ${jsonStr.slice(0, 200)}`
+    );
+  }
+
+  const obj = parsed as Record<string, unknown>;
+
+  // Normalize response to WordDefinition shape.
+  // The local LLM may return: { word, translation, synonyms, ... }
+  // We need:    { concise_definition, comparison: [{ word_to_compare, analysis }] }
+  const conciseDefinition =
+    typeof obj.concise_definition === "string" && obj.concise_definition.trim()
+      ? obj.concise_definition.trim()
+      : typeof obj.translation === "string" && obj.translation.trim()
+        ? obj.translation.trim()
+        : typeof obj.definition === "string" && obj.definition.trim()
+          ? obj.definition.trim()
+          : `Definition for ${trimmed}`;
+
+  // synonyms: string[] → comparison: { word_to_compare, analysis }[]
+  const rawSynonyms = obj.synonyms;
+  let normalizedComp: Array<{ word_to_compare: string; analysis: string }> = [];
+  if (Array.isArray(rawSynonyms)) {
+    normalizedComp = rawSynonyms
+      .filter((s): s is string => typeof s === "string" && s.trim().length > 0)
+      .map((synonym) => ({
+        word_to_compare: synonym.trim(),
+        analysis: "", // local LLM doesn't provide comparison analysis
+      }));
+  } else if (Array.isArray(obj.comparison)) {
+    normalizedComp = (obj.comparison as Array<Record<string, unknown>>).map((c) => ({
+      word_to_compare: String(c.word_to_compare ?? "").trim(),
+      analysis: String(c.analysis ?? "").trim(),
+    }));
+  }
+
+  const forms = (obj.forms as Record<string, unknown> | undefined) ?? {};
+  const normalizedForms: Record<string, string> = {};
+  for (const [k, v] of Object.entries(forms)) {
+    normalizedForms[k] = typeof v === "string" ? v.trim() : "";
+  }
+
+  const definitions = (obj.definitions as Array<Record<string, unknown>> | undefined) ?? [];
+  const normalizedDefs = definitions.map((d) => ({
+    pos: String(d.pos ?? "").trim(),
+    explanation_en: String(d.explanation_en ?? "").trim(),
+    explanation_cn: String(d.explanation_cn ?? "").trim(),
+    example_en: String(d.example_en ?? "").trim(),
+    example_cn: String(d.example_cn ?? "").trim(),
+  }));
+
+  return {
+    word: String(obj.word ?? trimmed).trim() || trimmed,
+    pronunciation: String(obj.pronunciation ?? trimmed).trim() || trimmed,
+    concise_definition: conciseDefinition,
+    forms: normalizedForms,
+    definitions: normalizedDefs,
+    comparison: normalizedComp,
+  };
+}

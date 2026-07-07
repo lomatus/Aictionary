@@ -249,12 +249,15 @@ export async function testLlmConnection(config: LlmProvider) {
 
 export async function generateDefinitionFromLlm(
   word: string,
-  config: LlmProvider
+  config: LlmProvider,
+  options?: { systemPrompt?: string }
 ): Promise<WordDefinition> {
   const trimmed = word.trim();
   if (!trimmed) {
     throw new LlmServiceError("Word is required.");
   }
+
+  const systemPrompt = options?.systemPrompt ?? SYSTEM_PROMPT;
 
   try {
     const { client, model } = createClient(config);
@@ -263,7 +266,7 @@ export async function generateDefinitionFromLlm(
       temperature: 0.1,
       response_format: zodResponseFormat(RESPONSE_SCHEMA, "word_definition"),
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: systemPrompt },
         {
           role: "user",
           content: trimmed,

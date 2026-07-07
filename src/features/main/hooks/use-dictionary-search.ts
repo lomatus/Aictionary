@@ -24,9 +24,33 @@ import {
 import {
   translateText,
   hasLlmCredentials,
+  generateDefinitionFromLlm,
   LlmServiceError,
 } from "@/shared/services/llm-service";
-import { translateTextWithLlama } from "@/shared/services/llama-service";
+import {
+  translateTextWithLlama,
+  generateDefinitionWithLlama,
+  LlamaServiceError,
+} from "@/shared/services/llama-service";
+
+const LANG_NAME: Record<string, string> = {
+  en: "English",
+  zh: "Chinese",
+  es: "Spanish",
+  fr: "French",
+  de: "German",
+  ja: "Japanese",
+  ko: "Korean",
+};
+
+function resolveTargetLang(dictType: string, inputLang: string): string {
+  if (dictType === "auto") {
+    // Chinese → English, everything else → Chinese
+    return inputLang === "zh" ? "English" : "Chinese";
+  }
+  const pairId = resolvePairId(dictType, inputLang);
+  return LANG_NAME[pairId.split("_")[1]] ?? "English";
+}
 
 export function useDictionarySearch() {
   const { t } = useTranslation();
@@ -41,6 +65,7 @@ export function useDictionarySearch() {
 
   const [suggestion, setSuggestion] = useState<Suggestion | null>(null);
   const [lastQuery, setLastQuery] = useState("");
+
   const suggest = useCallback(
     async (word: string): Promise<string[]> => {
       const normalized = word.trim();
@@ -76,8 +101,9 @@ export function useDictionarySearch() {
       setTranslationResult(null);
 
       const inputLang = detectLanguage(normalized);
+      const targetLang = resolveTargetLang(settings.dictionary.dictType, inputLang);
       const pairId = resolvePairId(settings.dictionary.dictType, inputLang);
-      console.log("[search] inputLang:", inputLang, "dictType:", settings.dictionary.dictType, "pairId:", pairId);
+      console.log("[search] inputLang:", inputLang, "dictType:", settings.dictionary.dictType, "pairId:", pairId, "targetLang:", targetLang);
 
       setIsSearching(true);
       setSuggestion(null);
@@ -102,7 +128,62 @@ export function useDictionarySearch() {
         }
 
         if (!isSentence(normalized)) {
-          toast.error(t("main.llm.not_found_word"));
+          // Unknown word — try generating definition via LLM
+          if (settings.localLlm.enabled && settings.localLlm.binaryPath.trim()) {
+            // ── Local LLM path ─────────────────────────────────────
+            setResult({ result: null, word: normalized });
+            setGeneratingModel("local");
+            setIsGeneratingFromLlm(true);
+
+            try {
+              const generated = await generateDefinitionWithLlama(
+                normalized,
+                settings.localLlm.serverPort || 11435,
+                settings.promptTemplates.definition
+              );
+              setResult({ result: generated, word: normalized });
+            } catch (llmError) {
+              console.error(llmError);
+              toast.error(
+                llmError instanceof LlamaServiceError
+                  ? llmError.message
+                  : t("main.llm.error")
+              );
+            } finally {
+              setIsGeneratingFromLlm(false);
+              setGeneratingModel(null);
+            }
+            setIsSearching(false);
+            return;
+          }
+
+          if (!hasLlmCredentials(settings.llm)) {
+            toast.error(t("main.llm.not_found_word"));
+            setIsSearching(false);
+            return;
+          }
+
+          // ── Remote LLM path ─────────────────────────────────────
+          setResult({ result: null, word: normalized });
+          setGeneratingModel(settings.llm.model);
+          setIsGeneratingFromLlm(true);
+
+          try {
+            const generated = await generateDefinitionFromLlm(normalized, settings.llm, {
+              systemPrompt: settings.promptTemplates.definition,
+            });
+            setResult({ result: generated, word: normalized });
+          } catch (llmError) {
+            console.error(llmError);
+            toast.error(
+              llmError instanceof LlmServiceError
+                ? llmError.message
+                : t("main.llm.error")
+            );
+          } finally {
+            setIsGeneratingFromLlm(false);
+            setGeneratingModel(null);
+          }
           setIsSearching(false);
           return;
         }
@@ -120,8 +201,6 @@ export function useDictionarySearch() {
           setIsGeneratingFromLlm(true);
 
           try {
-            const targetLang = pairId.includes("zh") ? "Chinese" : "Spanish";
-
             const translated = await translateTextWithLlama(
               normalized,
               targetLang,
@@ -155,7 +234,6 @@ export function useDictionarySearch() {
         setIsGeneratingFromLlm(true);
 
         try {
-          const targetLang = pairId.includes("zh") ? "Chinese" : "Spanish";
           const translated = await translateText(normalized, targetLang, settings.llm, {
             template: settings.promptTemplates.translation || undefined,
             glossary: settings.glossary,
